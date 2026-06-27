@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 Social Media Analyzer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="logo">📊 Social Analyzer</h1>
+                <p class="subtitle">Phân tích kênh YouTube, TikTok, Instagram & nhiều nền tảng khác</p>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Input Section -->
+            <section class="input-section">
+                <div class="input-container">
+                    <label for="links-input" class="input-label">🔗 Nhập các link kênh (mỗi link trên một dòng)</label>
+                    <textarea 
+                        id="links-input" 
+                        class="links-input" 
+                        placeholder="https://youtube.com/channel/UCxxx&#10;https://tiktok.com/@username&#10;https://instagram.com/username&#10;&#10;(Nhập nhiều link, mỗi link trên 1 dòng)"
+                        rows="5"></textarea>
+                    <div class="input-actions">
+                        <button id="analyze-btn" class="btn btn-primary">▶ Chạy phân tích</button>
+                        <button id="clear-btn" class="btn btn-secondary">🗑 Xóa</button>
+                        <button id="demo-btn" class="btn btn-demo">✨ Demo dữ liệu</button>
+                        <button id="open-admin-btn" class="btn btn-secondary">⚙️ Admin</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Status -->
+            <div id="status" class="status-bar"></div>
+
+            <!-- Admin Panel Link -->
+            <!-- Admin link removed per user request -->
+
+            <!-- Results Section -->
+            <section class="results-section">
+                <div id="results-container" class="results-container">
+                    <div class="empty-state">
+                        <p>📍 Nhập các link kênh để bắt đầu phân tích...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Platform Reference -->
+            <section class="platforms-section">
+                <h2 class="section-title">🚀 Nền tảng được hỗ trợ</h2>
+                <div class="platforms-grid">
+                    <!-- YouTube -->
+                    <div class="platform-card platform-youtube">
+                        <div class="platform-icon">▶</div>
+                        <h3>YouTube</h3>
+                        <p class="status-active">✅ Hoạt động</p>
+                        <small>Yêu cầu API Key</small>
+                    </div>
+
+                    <!-- TikTok -->
+                    <div class="platform-card platform-tiktok">
+                        <div class="platform-icon">♪</div>
+                        <h3>TikTok</h3>
+                        <p class="status-active">✅ Hoạt động</p>
+                        <small>Yêu cầu RapidAPI Key</small>
+                    </div>
+
+                    <!-- Instagram -->
+                    <div class="platform-card platform-instagram">
+                        <div class="platform-icon">📷</div>
+                        <h3>Instagram</h3>
+                        <p class="status-active">✅ Hoạt động</p>
+                        <small>Yêu cầu RapidAPI Key</small>
+                    </div>
+
+                    <!-- Twitch (Placeholder) -->
+                    <div class="platform-card platform-twitch">
+                        <div class="platform-icon">🎮</div>
+                        <h3>Twitch</h3>
+                        <p class="status-pending">⏳ Sắp cập nhật</p>
+                        <small>API Key ready</small>
+                    </div>
+
+                    <!-- Pinterest (Placeholder) -->
+                    <div class="platform-card platform-pinterest">
+                        <div class="platform-icon">📌</div>
+                        <h3>Pinterest</h3>
+                        <p class="status-pending">⏳ Sắp cập nhật</p>
+                        <small>API Key ready</small>
+                    </div>
+
+                    <!-- LinkedIn (Placeholder) -->
+                    <div class="platform-card platform-linkedin">
+                        <div class="platform-icon">💼</div>
+                        <h3>LinkedIn</h3>
+                        <p class="status-pending">⏳ Sắp cập nhật</p>
+                        <small>API Key ready</small>
+                    </div>
+
+                    <!-- Facebook (Placeholder) -->
+                    <div class="platform-card platform-facebook">
+                        <div class="platform-icon">f</div>
+                        <h3>Facebook</h3>
+                        <p class="status-pending">⏳ Sắp cập nhật</p>
+                        <small>API Key ready</small>
+                    </div>
+
+                    <!-- Twitter/X (Placeholder) -->
+                    <div class="platform-card platform-twitter">
+                        <div class="platform-icon">𝕏</div>
+                        <h3>Twitter/X</h3>
+                        <p class="status-pending">⏳ Sắp cập nhật</p>
+                        <small>API Key ready</small>
+                    </div>
+                </div>
+            </section>
+
+            <!-- History Section -->
+            <section class="history-section">
+                <div class="history-header">
+                    <h2 class="section-title">📜 Lịch sử phân tích</h2>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <button id="export-history-btn" class="btn btn-small btn-primary">📤 Xuất Excel</button>
+                        <button id="clear-history-btn" class="btn btn-small btn-danger">🗑 Xóa lịch sử</button>
+                    </div>
+                </div>
+                <div id="history-container" class="history-container">
+                    <p class="history-empty">Chưa có lịch sử phân tích nào</p>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>© 2026 Social Media Analyzer • Nguyễn Hữu Hải ❤️ </p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+    <!-- History Detail Modal -->
+    <div id="history-modal" class="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index:9999;">
+        <div class="modal-content" style="background:#0f1724; color:#fff; max-width:900px; width:90%; border-radius:12px; padding:20px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <h3 id="history-modal-title">Chi tiết lịch sử</h3>
+                <button id="history-modal-close" class="btn btn-small">Đóng</button>
+            </div>
+            <div id="history-modal-body" style="max-height:60vh; overflow:auto;"></div>
+        </div>
+    </div>
+</body>
+</html>

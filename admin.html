@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚙️ Admin Panel - API Configuration</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .admin-page { min-height: 100vh; }
+        .admin-container { max-width: 600px; margin: 40px auto; }
+        .admin-header { text-align: center; margin-bottom: 40px; }
+        .admin-header h1 { font-size: 2.2rem; margin-bottom: 10px; }
+        .admin-section { 
+            background: var(--primary-light);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+        .admin-title { font-size: 1.3rem; font-weight: 700; margin-bottom: 20px; }
+        .form-group {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .form-label {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+        .form-input {
+            background: var(--primary-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 15px;
+            color: var(--text-primary);
+            font-family: 'Monaco', monospace;
+            font-size: 0.9rem;
+            transition: all var(--transition);
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: var(--yt-red);
+            box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.1);
+        }
+        .form-hint {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+        .form-link {
+            color: #3b82f6;
+            text-decoration: none;
+        }
+        .form-link:hover { text-decoration: underline; }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .checkbox-group input {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--yt-red);
+        }
+        .checkbox-group label {
+            cursor: pointer;
+            margin: 0;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .btn-save {
+            background: linear-gradient(135deg, var(--yt-red), #ff3333);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition);
+            flex: 1;
+            min-width: 120px;
+        }
+        .btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(255, 0, 0, 0.3);
+        }
+
+        .btn-test {
+            background: var(--primary-dark);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+        .btn-test:hover {
+            border-color: var(--yt-red);
+            color: var(--yt-red);
+        }
+
+        .status-message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+        }
+        .status-message.show { display: flex; }
+        .status-message.success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--success-color);
+            color: var(--success-color);
+        }
+        .status-message.error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid #ef4444;
+            color: #fca5a5;
+        }
+
+        .info-box {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--success-color);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #3b82f6;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .back-link:hover { text-decoration: underline; }
+
+        .footer-text {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+    </style>
+</head>
+<body class="admin-page">
+    <div class="admin-container">
+        <a href="index.html" class="back-link">← Quay lại Analyzer</a>
+
+        <div class="admin-header">
+            <h1>⚙️ Admin Panel</h1>
+            <p style="color: var(--text-secondary);">Cấu hình API Keys để bắt đầu phân tích</p>
+        </div>
+
+        <!-- Status Message -->
+        <div id="status-message" class="status-message"></div>
+
+        <div id="login-container" class="admin-section">
+            <div class="admin-title">🔐 Đăng nhập Admin</div>
+            <div class="form-group">
+                <label class="form-label">Tên tài khoản:</label>
+                <input type="text" id="admin-username" class="form-input" placeholder="">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Mật khẩu:</label>
+                <input type="password" id="admin-password" class="form-input" placeholder="********">
+            </div>
+            <div class="button-group">
+                <button class="btn-save" onclick="handleLogin()">🔓 Đăng nhập</button>
+            </div>
+            <!-- <div class="form-hint" style="color: var(--text-muted); margin-top: 10px;">
+                Tài khoản: <strong>admin</strong> • Mật khẩu: <strong>huuhails22082002</strong>
+            </div> -->
+        </div>
+
+        <div id="admin-content" class="hidden">
+        <!-- YouTube API Section -->
+        <div class="admin-section">
+            <div class="admin-title">▶ YouTube API</div>
+            <div class="info-box">
+                ✓ Cần YouTube Data API v3 từ Google Cloud Console<br>
+                ✓ Hỗ trợ: Channel info, subscribers, videos, views
+            </div>
+            <div class="form-group">
+                <label class="form-label">YouTube API Key:</label>
+                <input type="password" id="yt-key" class="form-input" placeholder="AIzaSy...">
+                <div class="form-hint">
+                    Lấy từ: <a href="https://console.cloud.google.com" target="_blank" class="form-link">Google Cloud Console</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- RapidAPI Section -->
+        <div class="admin-section">
+            <div class="admin-title">🔌 RapidAPI Key</div>
+            <div class="info-box">
+                ✓ Dùng cho TikTok và Instagram API<br>
+                ✓ Hỗ trợ: User info, followers, videos, stats<br>
+                ✓ Có free tier để test
+            </div>
+            <div class="form-group">
+                <label class="form-label">RapidAPI Key:</label>
+                <input type="password" id="rapidapi-key" class="form-input" placeholder="d2929a6eff...">
+                <div class="form-hint">
+                    Lấy từ: <a href="https://rapidapi.com" target="_blank" class="form-link">RapidAPI.com</a>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">RapidAPI Key (TikTok riêng):</label>
+                <input type="password" id="rapidapi-tiktok-key" class="form-input" placeholder="d2929a6eff...">
+                <div class="form-hint">Dùng riêng cho các endpoint TikTok (nếu khác)</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">RapidAPI Key (Instagram riêng):</label>
+                <input type="password" id="rapidapi-instagram-key" class="form-input" placeholder="d2929a6eff...">
+                <div class="form-hint">Dùng riêng cho các endpoint Instagram (nếu khác)</div>
+            </div>
+        </div>
+
+        <!-- Additional APIs Section -->
+        <div class="admin-section">
+            <div class="admin-title">🚀 API khác (Sắp cập nhật)</div>
+            <div class="info-box">
+                <strong>Twitch:</strong> Client ID + OAuth Token<br>
+                <strong>Pinterest:</strong> Business Account + API Key<br>
+                <strong>LinkedIn:</strong> Developer App + Access Token<br>
+                <strong>Facebook:</strong> Graph API Token<br>
+                <strong>Twitter/X:</strong> API Key + Bearers Token
+            </div>
+        </div>
+
+        <!-- Settings Section -->
+        <div class="admin-section">
+            <div class="admin-title">⚙️ Cài đặt</div>
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="show-keys" class="checkbox-input">
+                    <label for="show-keys">Hiển thị API Keys</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="admin-section">
+            <div class="button-group">
+                <button class="btn-save" onclick="saveConfig()">💾 Lưu cấu hình</button>
+                <button class="btn-test" onclick="testAPIs()">🧪 Test API</button>
+            </div>
+        </div>
+
+        <!-- Info -->
+        <div class="info-box" style="margin-top: 30px;">
+            <strong>💡 Thông tin:</strong><br>
+            • API Keys được lưu cục bộ trong browser (localStorage)<br>
+            • Không được gửi tới server hoặc chia sẻ<br>
+            • Chỉ dùng cho authorization với các service<br>
+            • Xóa: Mở DevTools (F12) → Console → localStorage.clear()
+        </div>
+
+        <div class="footer-text">
+            © 2024 Social Media Analyzer • Secure Admin Panel
+        </div>
+        </div>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>
