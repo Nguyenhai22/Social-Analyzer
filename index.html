@@ -3,131 +3,153 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📊 Social Media Analyzer</title>
+    <title>Social Intelligence Hub</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-content">
-                <h1 class="logo">📊 Social Analyzer</h1>
-                <p class="subtitle">Phân tích kênh YouTube, TikTok, Instagram & nhiều nền tảng khác</p>
+        <header class="hero-panel">
+            <div class="hero-content">
+                <div class="hero-text">
+                    <p class="eyebrow">Social Intelligence Hub</p>
+                    <h1>Phân tích kênh xã hội chuyên nghiệp, rõ ràng và dễ dùng</h1>
+                    <p>Nhập nhiều link, xem kết quả đẹp hơn, lưu lịch sử và đồng bộ dữ liệu với Supabase hoặc API tùy chỉnh để dùng cho dashboard và báo cáo.</p>
+                    <div class="hero-actions">
+                        <button id="analyze-btn" class="btn btn-primary">▶ Chạy phân tích</button>
+                        <button id="demo-btn" class="btn btn-secondary">✨ Demo dữ liệu</button>
+                        <button id="open-admin-btn" class="btn btn-secondary">⚙️ Cấu hình</button>
+                    </div>
+                </div>
+                <div class="hero-stats" id="overview-stats">
+                    <div class="overview-card">
+                        <div class="overview-label">Phân tích</div>
+                        <div class="overview-value" id="overview-total">0</div>
+                    </div>
+                    <div class="overview-card">
+                        <div class="overview-label">Kênh thành công</div>
+                        <div class="overview-value" id="overview-success">0</div>
+                    </div>
+                    <div class="overview-card">
+                        <div class="overview-label">Sync trạng thái</div>
+                        <div class="overview-value" id="overview-sync">Offline</div>
+                    </div>
+                </div>
             </div>
         </header>
 
-        <!-- Main Content -->
-        <main class="main">
-            <!-- Input Section -->
-            <section class="input-section">
-                <div class="input-container">
-                    <label for="links-input" class="input-label">🔗 Nhập các link kênh (mỗi link trên một dòng)</label>
-                    <textarea 
-                        id="links-input" 
-                        class="links-input" 
-                        placeholder="https://youtube.com/channel/UCxxx&#10;https://tiktok.com/@username&#10;https://instagram.com/username&#10;&#10;(Nhập nhiều link, mỗi link trên 1 dòng)"
-                        rows="5"></textarea>
-                    <div class="input-actions">
-                        <button id="analyze-btn" class="btn btn-primary">▶ Chạy phân tích</button>
-                        <button id="clear-btn" class="btn btn-secondary">🗑 Xóa</button>
-                        <button id="demo-btn" class="btn btn-demo">✨ Demo dữ liệu</button>
-                        <button id="open-admin-btn" class="btn btn-secondary">⚙️ Admin</button>
+        <main class="main-grid">
+            <section class="panel input-panel">
+                <div class="panel-header">
+                    <div>
+                        <p class="eyebrow">Nhập dữ liệu</p>
+                        <h2>Danh sách kênh cần phân tích</h2>
+                    </div>
+                    <button id="clear-btn" class="btn btn-ghost">🧹 Xóa</button>
+                </div>
+                <label for="links-input" class="input-label">Nhập từng link trên một dòng</label>
+                <textarea id="links-input" class="links-input" rows="6" placeholder="https://youtube.com/channel/UCxxx&#10;https://tiktok.com/@username&#10;https://instagram.com/username"></textarea>
+                <div class="chip-row">
+                    <button class="chip-btn" data-demo="1">Demo nhanh</button>
+                    <button class="chip-btn" data-demo="2">YouTube + TikTok</button>
+                    <button class="chip-btn" data-demo="3">IG + Demo</button>
+                </div>
+                <div class="input-actions">
+                    <button id="analyze-btn-primary" class="btn btn-primary wide">▶ Chạy phân tích</button>
+                    <button id="sync-btn" class="btn btn-secondary">☁️ Đồng bộ dữ liệu</button>
+                </div>
+            </section>
+
+            <section class="panel status-panel">
+                <div class="panel-header">
+                    <div>
+                        <p class="eyebrow">Trạng thái</p>
+                        <h2>Tiến trình xử lý</h2>
+                    </div>
+                </div>
+                <div id="status" class="status-bar"></div>
+                <div class="insight-list">
+                    <div class="insight-item">
+                        <span>📦</span>
+                        <div>
+                            <strong>Dữ liệu cục bộ</strong>
+                            <p>Luôn lưu trong trình duyệt để xem lại nhanh.</p>
+                        </div>
+                    </div>
+                    <div class="insight-item">
+                        <span>🔌</span>
+                        <div>
+                            <strong>Backend ẩn</strong>
+                            <p>Ứng dụng dùng backend ẩn để lưu lịch sử và đồng bộ dữ liệu.</p>
+                        </div>
+                    </div>
+                    <div class="insight-item">
+                        <span>📈</span>
+                        <div>
+                            <strong>Hiển thị rõ ràng</strong>
+                            <p>Kết quả được tóm tắt bằng thẻ thống kê và video gần đây.</p>
+                        </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Status -->
-            <div id="status" class="status-bar"></div>
-
-            <!-- Admin Panel Link -->
-            <!-- Admin link removed per user request -->
-
-            <!-- Results Section -->
-            <section class="results-section">
+            <section class="panel results-panel">
+                <div class="panel-header">
+                    <div>
+                        <p class="eyebrow">Kết quả</p>
+                        <h2>Danh sách kênh phân tích</h2>
+                    </div>
+                </div>
                 <div id="results-container" class="results-container">
                     <div class="empty-state">
-                        <p>📍 Nhập các link kênh để bắt đầu phân tích...</p>
+                        <p>📍 Nhập các link để bắt đầu phân tích và xem biểu đồ/điểm số rõ ràng hơn.</p>
                     </div>
                 </div>
             </section>
 
-            <!-- Platform Reference -->
-            <section class="platforms-section">
-                <h2 class="section-title">🚀 Nền tảng được hỗ trợ</h2>
+            <section class="panel platforms-panel">
+                <div class="panel-header">
+                    <div>
+                        <p class="eyebrow">Nền tảng</p>
+                        <h2>Hỗ trợ hiện tại</h2>
+                    </div>
+                </div>
                 <div class="platforms-grid">
-                    <!-- YouTube -->
                     <div class="platform-card platform-youtube">
                         <div class="platform-icon">▶</div>
                         <h3>YouTube</h3>
-                        <p class="status-active">✅ Hoạt động</p>
-                        <small>Yêu cầu API Key</small>
+                        <p class="status-active">✅ Sẵn sàng</p>
+                        <small>API key + mock fallback</small>
                     </div>
-
-                    <!-- TikTok -->
                     <div class="platform-card platform-tiktok">
                         <div class="platform-icon">♪</div>
                         <h3>TikTok</h3>
-                        <p class="status-active">✅ Hoạt động</p>
-                        <small>Yêu cầu RapidAPI Key</small>
+                        <p class="status-active">✅ Sẵn sàng</p>
+                        <small>RapidAPI key</small>
                     </div>
-
-                    <!-- Instagram -->
                     <div class="platform-card platform-instagram">
                         <div class="platform-icon">📷</div>
                         <h3>Instagram</h3>
-                        <p class="status-active">✅ Hoạt động</p>
-                        <small>Yêu cầu RapidAPI Key</small>
+                        <p class="status-active">✅ Sẵn sàng</p>
+                        <small>RapidAPI key</small>
                     </div>
-
-                    <!-- Twitch (Placeholder) -->
                     <div class="platform-card platform-twitch">
                         <div class="platform-icon">🎮</div>
                         <h3>Twitch</h3>
-                        <p class="status-pending">⏳ Sắp cập nhật</p>
-                        <small>API Key ready</small>
-                    </div>
-
-                    <!-- Pinterest (Placeholder) -->
-                    <div class="platform-card platform-pinterest">
-                        <div class="platform-icon">📌</div>
-                        <h3>Pinterest</h3>
-                        <p class="status-pending">⏳ Sắp cập nhật</p>
-                        <small>API Key ready</small>
-                    </div>
-
-                    <!-- LinkedIn (Placeholder) -->
-                    <div class="platform-card platform-linkedin">
-                        <div class="platform-icon">💼</div>
-                        <h3>LinkedIn</h3>
-                        <p class="status-pending">⏳ Sắp cập nhật</p>
-                        <small>API Key ready</small>
-                    </div>
-
-                    <!-- Facebook (Placeholder) -->
-                    <div class="platform-card platform-facebook">
-                        <div class="platform-icon">f</div>
-                        <h3>Facebook</h3>
-                        <p class="status-pending">⏳ Sắp cập nhật</p>
-                        <small>API Key ready</small>
-                    </div>
-
-                    <!-- Twitter/X (Placeholder) -->
-                    <div class="platform-card platform-twitter">
-                        <div class="platform-icon">𝕏</div>
-                        <h3>Twitter/X</h3>
-                        <p class="status-pending">⏳ Sắp cập nhật</p>
-                        <small>API Key ready</small>
+                        <p class="status-pending">⏳ Sắp tới</p>
+                        <small>Chuẩn bị mở rộng</small>
                     </div>
                 </div>
             </section>
 
-            <!-- History Section -->
-            <section class="history-section">
+            <section class="panel history-panel">
                 <div class="history-header">
-                    <h2 class="section-title">📜 Lịch sử phân tích</h2>
-                    <div style="display:flex;gap:8px;align-items:center;">
-                        <button id="export-history-btn" class="btn btn-small btn-primary">📤 Xuất Excel</button>
-                        <button id="clear-history-btn" class="btn btn-small btn-danger">🗑 Xóa lịch sử</button>
+                    <div>
+                        <p class="eyebrow">Lịch sử</p>
+                        <h2>Nhật ký phân tích</h2>
+                    </div>
+                    <div class="history-actions">
+                        <button id="export-history-btn" class="btn btn-small btn-primary">📤 Xuất CSV</button>
+                        <button id="clear-history-btn" class="btn btn-small btn-danger">🗑 Xóa</button>
                     </div>
                 </div>
                 <div id="history-container" class="history-container">
@@ -136,21 +158,19 @@
             </section>
         </main>
 
-        <!-- Footer -->
         <footer class="footer">
-            <p>© 2026 Social Media Analyzer • Nguyễn Hữu Hải ❤️ </p>
+            <p>© 2026 Social Intelligence Hub • Thiết kế chuyên nghiệp, tối giản và dễ mở rộng</p>
         </footer>
     </div>
 
     <script src="script.js"></script>
-    <!-- History Detail Modal -->
-    <div id="history-modal" class="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index:9999;">
-        <div class="modal-content" style="background:#0f1724; color:#fff; max-width:900px; width:90%; border-radius:12px; padding:20px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <div id="history-modal" class="modal" style="display:none; position:fixed; inset:0; background:rgba(8,15,30,0.68); align-items:center; justify-content:center; z-index:9999;">
+        <div class="modal-content">
+            <div class="modal-header">
                 <h3 id="history-modal-title">Chi tiết lịch sử</h3>
                 <button id="history-modal-close" class="btn btn-small">Đóng</button>
             </div>
-            <div id="history-modal-body" style="max-height:60vh; overflow:auto;"></div>
+            <div id="history-modal-body" class="modal-body"></div>
         </div>
     </div>
 </body>
