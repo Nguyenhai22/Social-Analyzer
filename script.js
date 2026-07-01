@@ -1,32 +1,104 @@
-// ========== CONFIG ==========
+const DEFAULT_SUPABASE_URL = 'https://lzgeocvfzmjheywonenf.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_GYTVNGz5s917E8l245RSWQ_iTCFF6et';
+
 function getConfig() {
+    const storedSupabaseUrl = (localStorage.getItem('supabase_url') || '').trim();
+    const storedSupabaseKey = (localStorage.getItem('supabase_anon_key') || '').trim();
+    const storedApiEndpoint = (localStorage.getItem('sync_api_endpoint') || '').trim();
+
+    const supabaseUrl = storedSupabaseUrl || DEFAULT_SUPABASE_URL;
+    const supabaseKey = storedSupabaseKey || DEFAULT_SUPABASE_ANON_KEY;
+    const hasSupabase = Boolean(supabaseUrl && supabaseKey);
+    const hasEndpoint = Boolean(storedApiEndpoint);
+
     return {
-        YOUTUBE_API_KEY: localStorage.getItem('yt_api_key') || '',
-        RAPIDAPI_KEY: localStorage.getItem('rapidapi_key') || '',
-        RAPIDAPI_TIKTOK_KEY: localStorage.getItem('rapidapi_tiktok_key') || '',
-        RAPIDAPI_INSTAGRAM_KEY: localStorage.getItem('rapidapi_instagram_key') || '',
+        YOUTUBE_API_KEY: (localStorage.getItem('yt_api_key') || '').trim(),
+        RAPIDAPI_KEY: (localStorage.getItem('rapidapi_key') || '').trim(),
+        RAPIDAPI_TIKTOK_KEY: (localStorage.getItem('rapidapi_tiktok_key') || '').trim(),
+        RAPIDAPI_INSTAGRAM_KEY: (localStorage.getItem('rapidapi_instagram_key') || '').trim(),
+        SUPABASE_URL: supabaseUrl,
+        SUPABASE_ANON_KEY: supabaseKey,
+        API_ENDPOINT: storedApiEndpoint,
+        SYNC_ENABLED: hasSupabase || hasEndpoint,
         MAX_VIDEOS: 5,
     };
 }
 
-// ========== HISTORY ==========
+function interpretSupabaseError(text) {
+    if (!text) return text;
+    if (text.includes('row-level security policy')) {
+        return 'RLS chặn quyền INSERT cho role anon trên bảng History_API_Analyst. Vui lòng tạo policy INSERT cho anon hoặc tắt RLS.';
+    }
+    return text;
+}
+
+async function getSupabaseApiKey(apiName) {
+    const cfg = getConfig();
+    if (!cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY) return null;
+
+    const baseUrl = cfg.SUPABASE_URL.replace(/\/$/, '');
+    const wildcard = encodeURIComponent(`%${apiName}%`);
+    const exact = encodeURIComponent(apiName);
+    const endpoints = [
+        `${baseUrl}/rest/v1/API_Key?select=API_Code&API_Name=ilike.${wildcard}&limit=1`,
+        `${baseUrl}/rest/v1/API_Key?select=API_Code&API_Name=eq.${exact}&limit=1`,
+        `${baseUrl}/rest/v1/API_Key?select=api_code&api_name=ilike.${wildcard}&limit=1`,
+        `${baseUrl}/rest/v1/API_Key?select=api_code&api_name=eq.${exact}&limit=1`,
+        `${baseUrl}/rest/v1/api_key?select=API_Code&API_Name=ilike.${wildcard}&limit=1`,
+        `${baseUrl}/rest/v1/api_key?select=API_Code&API_Name=eq.${exact}&limit=1`,
+        `${baseUrl}/rest/v1/api_key?select=api_code&api_name=ilike.${wildcard}&limit=1`,
+        `${baseUrl}/rest/v1/api_key?select=api_code&api_name=eq.${exact}&limit=1`
+    ];
+
+    for (const url of endpoints) {
+        try {
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'apikey': cfg.SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${cfg.SUPABASE_ANON_KEY}`,
+                    'Accept': 'application/json'
+                }
+            });
+            const text = await response.text();
+            if (!response.ok) {
+                console.warn(`Supabase API_Key lookup failed (${response.status}) at ${url}: ${text}`);
+                continue;
+            }
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (error) {
+                console.warn('Supabase API_Key lookup returned invalid JSON:', text);
+                continue;
+            }
+            if (Array.isArray(data) && data.length > 0) {
+                const code = data[0].API_Code || data[0].api_code || null;
+                if (code) return code;
+            }
+        } catch (error) {
+            console.warn('Supabase API_Key lookup network error:', error.message || error);
+        }
+    }
+
+    console.warn(`Supabase API_Key row not found for '${apiName}'.`);
+    return null;
+}
+
 const HISTORY_STORAGE_KEY = 'analyzer_history';
 const MAX_HISTORY_ITEMS = 50;
-
-// Platform colors matching CSS
 const PLATFORM_COLORS = {
-    YOUTUBE: { name: '▶ YouTube', class: 'youtube', accent: '#FF0000' },
-    TIKTOK: { name: '♪ TikTok', class: 'tiktok', accent: '#EE1D52' },
-    INSTAGRAM: { name: '📷 Instagram', class: 'instagram', accent: '#E1306C' },
-    TWITCH: { name: '🎮 Twitch', class: 'twitch', accent: '#6441A5' },
-    PINTEREST: { name: '📌 Pinterest', class: 'pinterest', accent: '#E60023' },
-    LINKEDIN: { name: '💼 LinkedIn', class: 'linkedin', accent: '#0A66C2' },
-    FACEBOOK: { name: 'f Facebook', class: 'facebook', accent: '#1877F2' },
-    TWITTER: { name: '𝕏 Twitter/X', class: 'twitter', accent: '#000000' },
+    YOUTUBE: { name: '▶ YouTube', class: 'youtube', accent: '#FF4D4F' },
+    TIKTOK: { name: '♪ TikTok', class: 'tiktok', accent: '#EC4899' },
+    INSTAGRAM: { name: '📷 Instagram', class: 'instagram', accent: '#F43F5E' },
+    TWITCH: { name: '🎮 Twitch', class: 'twitch', accent: '#8B5CF6' },
+    PINTEREST: { name: '📌 Pinterest', class: 'pinterest', accent: '#FB7185' },
+    LINKEDIN: { name: '💼 LinkedIn', class: 'linkedin', accent: '#38BDF8' },
+    FACEBOOK: { name: 'f Facebook', class: 'facebook', accent: '#60A5FA' },
+    TWITTER: { name: '𝕏 Twitter/X', class: 'twitter', accent: '#111827' },
     UNKNOWN: { name: '🔗 Unknown', class: 'unknown', accent: '#555555' },
 };
 
-// ========== MOCK DATA ==========
 const MOCK_DATA = {
     'youtube.com/channel/UC4JX40jDee_tINbkjyCMBg': {
         platform: 'YOUTUBE',
@@ -41,9 +113,7 @@ const MOCK_DATA = {
         videos: [
             { title: '$456,000 Squid Game In Real Life!', date: '03/11/2021', views: 225000000, likes: 5600000, comments: 487000, url: 'https://youtube.com/watch?v=example1' },
             { title: 'I Gave My 40,000,000th Subscriber 40 Million Dollars', date: '28/07/2022', views: 154000000, likes: 3900000, comments: 324000, url: 'https://youtube.com/watch?v=example2' },
-            { title: 'I Bought Entire NBA Team', date: '15/04/2023', views: 180000000, likes: 4200000, comments: 456000, url: 'https://youtube.com/watch?v=example3' },
-            { title: '$500,000 Extreme Hide and Seek!', date: '22/09/2023', views: 198000000, likes: 5100000, comments: 520000, url: 'https://youtube.com/watch?v=example4' },
-            { title: 'Last To Leave Circle Wins $500,000', date: '10/12/2023', views: 167000000, likes: 4300000, comments: 389000, url: 'https://youtube.com/watch?v=example5' },
+            { title: 'I Bought Entire NBA Team', date: '15/04/2023', views: 180000000, likes: 4200000, comments: 456000, url: 'https://youtube.com/watch?v=example3' }
         ]
     },
     'tiktok.com/@khaby.lame': {
@@ -59,9 +129,7 @@ const MOCK_DATA = {
         videos: [
             { title: 'When you take funny videos too seriously 😂', date: '15/06/2024', views: 45000000, likes: 3200000, comments: 125000, url: 'https://tiktok.com/@khaby.lame/video/example1' },
             { title: 'That face when 😭', date: '10/06/2024', views: 38000000, likes: 2800000, comments: 98000, url: 'https://tiktok.com/@khaby.lame/video/example2' },
-            { title: 'POV: You are overthinking it 💀', date: '05/06/2024', views: 52000000, likes: 3900000, comments: 156000, url: 'https://tiktok.com/@khaby.lame/video/example3' },
-            { title: 'Bruhhh moment 😂😂', date: '01/06/2024', views: 41000000, likes: 3100000, comments: 112000, url: 'https://tiktok.com/@khaby.lame/video/example4' },
-            { title: 'When people overcomplicate things ✋', date: '28/05/2024', views: 36000000, likes: 2600000, comments: 87000, url: 'https://tiktok.com/@khaby.lame/video/example5' },
+            { title: 'POV: You are overthinking it 💀', date: '05/06/2024', views: 52000000, likes: 3900000, comments: 156000, url: 'https://tiktok.com/@khaby.lame/video/example3' }
         ]
     },
     'instagram.com/cristiano': {
@@ -77,16 +145,14 @@ const MOCK_DATA = {
         videos: [
             { title: 'Hard work beats talent 💪⚽', date: '20/06/2024', views: 45000000, likes: 2800000, comments: 325000, url: 'https://instagram.com/p/example1/' },
             { title: 'Family first, always ❤️', date: '18/06/2024', views: 38000000, likes: 2500000, comments: 298000, url: 'https://instagram.com/p/example2/' },
-            { title: 'Training day 🏋️', date: '15/06/2024', views: 42000000, likes: 2700000, comments: 312000, url: 'https://instagram.com/p/example3/' },
-            { title: 'Grateful for this journey ⚽🙏', date: '12/06/2024', views: 51000000, likes: 3100000, comments: 445000, url: 'https://instagram.com/p/example4/' },
-            { title: 'Mentality is everything 👑', date: '10/06/2024', views: 39000000, likes: 2600000, comments: 287000, url: 'https://instagram.com/p/example5/' },
+            { title: 'Training day 🏋️', date: '15/06/2024', views: 42000000, likes: 2700000, comments: 312000, url: 'https://instagram.com/p/example3/' }
         ]
     }
 };
 
-// ========== DOM ELEMENTS ==========
 const linksInput = document.getElementById('links-input');
 const analyzeBtn = document.getElementById('analyze-btn');
+const analyzeBtnPrimary = document.getElementById('analyze-btn-primary');
 const clearBtn = document.getElementById('clear-btn');
 const demoBtn = document.getElementById('demo-btn');
 const resultsContainer = document.getElementById('results-container');
@@ -94,60 +160,64 @@ const statusBar = document.getElementById('status');
 const historyContainer = document.getElementById('history-container');
 const clearHistoryBtn = document.getElementById('clear-history-btn');
 const openAdminBtn = document.getElementById('open-admin-btn');
+const syncBtn = document.getElementById('sync-btn');
+const overviewTotal = document.getElementById('overview-total');
+const overviewSuccess = document.getElementById('overview-success');
+const overviewSync = document.getElementById('overview-sync');
+const chipButtons = document.querySelectorAll('.chip-btn');
 
-// ========== EVENT LISTENERS ==========
-analyzeBtn.addEventListener('click', handleAnalyze);
-clearBtn.addEventListener('click', handleClear);
-demoBtn.addEventListener('click', handleDemo);
-clearHistoryBtn.addEventListener('click', handleClearHistory);
+analyzeBtn?.addEventListener('click', handleAnalyze);
+analyzeBtnPrimary?.addEventListener('click', handleAnalyze);
+clearBtn?.addEventListener('click', handleClear);
+demoBtn?.addEventListener('click', handleDemo);
+clearHistoryBtn?.addEventListener('click', handleClearHistory);
+syncBtn?.addEventListener('click', handleSyncNow);
 if (openAdminBtn) openAdminBtn.addEventListener('click', () => window.location.href = 'admin.html');
-
-// Load history on page load
-window.addEventListener('load', loadHistory);
-
-// ========== MAIN FUNCTIONS ==========
+chipButtons.forEach(btn => btn.addEventListener('click', () => applyPreset(btn.dataset.demo)));
+window.addEventListener('load', async () => {
+    loadHistory();
+    updateOverview();
+    await autoSyncLatestHistory();
+});
 
 function handleAnalyze() {
-    const links = linksInput.value
-        .split('\n')
-        .map(link => link.trim())
-        .filter(link => link.length > 0);
-
+    const links = linksInput.value.split('\n').map(link => link.trim()).filter(Boolean);
     if (links.length === 0) {
         showStatus('❌ Vui lòng nhập ít nhất một link!', 'error');
         return;
     }
-
-    // Quick validation: ensure required API keys are present for pasted platforms
-    const hasYouTube = links.some(l => detectPlatform(l) === 'YOUTUBE');
-    const hasRapid = links.some(l => detectPlatform(l) === 'TIKTOK' || detectPlatform(l) === 'INSTAGRAM');
-    const cfg = getConfig();
-    if (hasYouTube && !cfg.YOUTUBE_API_KEY) {
-        showStatus('❌ YouTube API Key chưa được cấu hình. Mở Admin Panel và lưu YouTube API Key.', 'error');
-        return;
-    }
-    if (hasRapid && !cfg.RAPIDAPI_KEY) {
-        showStatus('❌ RapidAPI Key chưa được cấu hình. Mở Admin Panel và lưu RapidAPI Key.', 'error');
-        return;
-    }
-
     analyzeLinks(links);
 }
 
 function handleClear() {
     linksInput.value = '';
-    resultsContainer.innerHTML = '<div class="empty-state"><p>📍 Nhập các link kênh để bắt đầu phân tích...</p></div>';
+    resultsContainer.innerHTML = '<div class="empty-state"><p>📍 Nhập các link để bắt đầu phân tích...</p></div>';
     statusBar.classList.remove('active');
 }
 
+function applyPreset(type) {
+    const presets = {
+        '1': [
+            'https://youtube.com/channel/UC4JX40jDee_tINbkjyCMBg',
+            'https://tiktok.com/@khaby.lame',
+            'https://instagram.com/cristiano'
+        ],
+        '2': [
+            'https://youtube.com/channel/UC4JX40jDee_tINbkjyCMBg',
+            'https://tiktok.com/@khaby.lame'
+        ],
+        '3': [
+            'https://instagram.com/cristiano',
+            'https://tiktok.com/@khaby.lame'
+        ]
+    };
+    linksInput.value = (presets[type] || presets['1']).join('\n');
+    showStatus('✨ Đã load preset mẫu. Bấm chạy phân tích để xem kết quả.', 'success');
+}
+
 function handleDemo() {
-    const demoLinks = [
-        'https://youtube.com/channel/UC4JX40jDee_tINbkjyCMBg',
-        'https://tiktok.com/@khaby.lame',
-        'https://instagram.com/cristiano'
-    ];
-    linksInput.value = demoLinks.join('\n');
-    analyzeLinks(demoLinks);
+    applyPreset('1');
+    analyzeLinks(['https://youtube.com/channel/UC4JX40jDee_tINbkjyCMBg', 'https://tiktok.com/@khaby.lame', 'https://instagram.com/cristiano']);
 }
 
 async function analyzeLinks(links) {
@@ -164,17 +234,10 @@ async function analyzeLinks(links) {
             showStatus(`⏳ Đang xử lý (${++processed}/${links.length}): ${link}`, 'loading');
 
             let data = null;
-
-            if (platform === 'YOUTUBE') {
-                data = await fetchYouTubeData(link);
-            } else if (platform === 'TIKTOK') {
-                data = await fetchTikTokData(link);
-            } else if (platform === 'INSTAGRAM') {
-                data = await fetchInstagramData(link);
-            } else {
-                errors.push(`❌ Không nhận ra: ${link}`);
-                continue;
-            }
+            if (platform === 'YOUTUBE') data = await fetchYouTubeData(link);
+            else if (platform === 'TIKTOK') data = await fetchTikTokData(link);
+            else if (platform === 'INSTAGRAM') data = await fetchInstagramData(link);
+            else { errors.push(`❌ Không nhận ra: ${link}`); continue; }
 
             if (data) {
                 renderResultCard(data, platform);
@@ -183,284 +246,219 @@ async function analyzeLinks(links) {
         } catch (error) {
             errors.push(`❌ ${link}: ${error.message}`);
         }
-
-        // Small delay to avoid rate limiting
         await sleep(300);
     }
 
-    // Save to history
-    saveToHistory(links, results, errors);
+    const historyItem = saveToHistory(links, results, errors);
+    const cfg = getConfig();
+    let syncResponse = null;
+    if (cfg.SYNC_ENABLED) {
+        syncResponse = await syncResultsToExternal(results, links, historyItem);
+    }
+    updateOverview();
 
     if (errors.length > 0) {
-        showStatus(`✅ Hoàn thành! (${processed} thành công, ${errors.length} lỗi)`, 'error');
+        if (syncResponse && !syncResponse.success) {
+            showStatus(`⚠️ Hoàn thành ${results.length} kênh, ${errors.length} lỗi. Đồng bộ thất bại: ${syncResponse.supabase.error || syncResponse.endpoint.error || 'Không rõ'}`, 'error');
+        } else {
+            showStatus(`✅ Hoàn thành! ${results.length} kênh thành công, ${errors.length} lỗi. Đồng bộ tự động đã chạy.`, 'error');
+        }
     } else {
-        showStatus(`✅ Hoàn thành! Đã phân tích ${processed} kênh.`, 'success');
+        if (syncResponse && !syncResponse.success) {
+            showStatus(`⚠️ Đã phân tích ${results.length} kênh nhưng đồng bộ thất bại: ${syncResponse.supabase.error || syncResponse.endpoint.error || 'Không rõ'}`, 'error');
+        } else if (syncResponse && syncResponse.success) {
+            showStatus(`✅ Hoàn thành! Đã phân tích ${results.length} kênh. Đồng bộ tự động đã chạy.`, 'success');
+        } else {
+            showStatus(`✅ Hoàn thành! Đã phân tích ${results.length} kênh.`, 'success');
+        }
     }
 }
 
-// ========== PLATFORM DETECTION ==========
-
 function detectPlatform(url) {
-    url = url.toLowerCase();
-    if (url.includes('youtube.com') || url.includes('youtu.be')) return 'YOUTUBE';
-    if (url.includes('tiktok.com')) return 'TIKTOK';
-    if (url.includes('instagram.com')) return 'INSTAGRAM';
-    if (url.includes('twitch.tv')) return 'TWITCH';
-    if (url.includes('pinterest.com')) return 'PINTEREST';
-    if (url.includes('linkedin.com')) return 'LINKEDIN';
-    if (url.includes('facebook.com')) return 'FACEBOOK';
-    if (url.includes('twitter.com') || url.includes('x.com')) return 'TWITTER';
+    const value = String(url || '').toLowerCase();
+    if (value.includes('youtube.com') || value.includes('youtu.be')) return 'YOUTUBE';
+    if (value.includes('tiktok.com')) return 'TIKTOK';
+    if (value.includes('instagram.com')) return 'INSTAGRAM';
+    if (value.includes('twitch.tv')) return 'TWITCH';
+    if (value.includes('pinterest.com')) return 'PINTEREST';
+    if (value.includes('linkedin.com')) return 'LINKEDIN';
+    if (value.includes('facebook.com')) return 'FACEBOOK';
+    if (value.includes('twitter.com') || value.includes('x.com')) return 'TWITTER';
     return 'UNKNOWN';
 }
 
-// ========== FETCH DATA FUNCTIONS ==========
-
 async function fetchYouTubeData(url) {
-    // Try mock data first
     for (const key in MOCK_DATA) {
-        if (url.includes(key)) {
-            return MOCK_DATA[key];
-        }
+        if (url.includes(key)) return { ...MOCK_DATA[key], source: 'mock' };
     }
 
-    // Read API key at runtime
     const cfg = getConfig();
-    const key = cfg.YOUTUBE_API_KEY;
+    let key = cfg.YOUTUBE_API_KEY;
     if (!key) {
-        throw new Error('YouTube API Key chưa được cấu hình. Mở Admin Panel và lưu YouTube API Key.');
+        key = await getSupabaseApiKey('YouTube');
     }
+    if (!key) throw new Error('YouTube API Key chưa được cấu hình. Mở trang Cấu hình để thêm key hoặc cấu hình Supabase.');
 
-    // Resolve channelId from URL or handle
     let channelId = extractYouTubeChannelId(url);
     if (!channelId) {
         const handle = extractYouTubeHandle(url);
         if (handle) {
             const h = handle.startsWith('@') ? handle.substring(1) : handle;
-            // Try username lookup first
             try {
                 let resp = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=id&forUsername=${encodeURIComponent(h)}&key=${key}`);
                 let data = await resp.json();
-                if (data.items && data.items.length) channelId = data.items[0].id;
+                if (data.items?.length) channelId = data.items[0].id;
                 else {
-                    // Try forHandle (newer handles)
                     resp = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=id&forHandle=${encodeURIComponent(h)}&key=${key}`);
                     data = await resp.json();
-                    if (data.items && data.items.length) channelId = data.items[0].id;
+                    if (data.items?.length) channelId = data.items[0].id;
                 }
             } catch (err) {
                 throw new Error('Lỗi khi truy vấn YouTube API: ' + err.message);
             }
         }
     }
+    if (!channelId) throw new Error('Không thể xác định Channel ID từ URL.');
 
-    if (!channelId) {
-        throw new Error('Không thể xác định Channel ID từ URL. Vui lòng nhập link dạng /channel/UC... hoặc kiểm tra lại link.');
-    }
+    const chResp = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${channelId}&key=${key}`);
+    const chData = await chResp.json();
+    if (chData.error) throw new Error(chData.error.message || 'Lỗi YouTube API');
+    if (!chData.items?.length) throw new Error('Không tìm thấy kênh trên YouTube.');
 
-    // Fetch channel details
+    const item = chData.items[0];
+    const result = {
+        platform: 'YOUTUBE',
+        name: item.snippet.title || 'Unknown',
+        handle: item.snippet.customUrl ? '@' + item.snippet.customUrl : (item.snippet.channelId || ''),
+        url: `https://youtube.com/channel/${channelId}`,
+        created: item.snippet.publishedAt ? new Date(item.snippet.publishedAt).toLocaleDateString('vi-VN') : 'N/A',
+        country: 'N/A',
+        subscribers: Number(item.statistics.subscriberCount || 0),
+        totalVideos: Number(item.statistics.videoCount || 0),
+        totalViews: Number(item.statistics.viewCount || 0),
+        videos: []
+    };
+
     try {
-        const chResp = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${channelId}&key=${key}`);
-        const chData = await chResp.json();
-        if (chData.error) {
-            throw new Error(chData.error.message || JSON.stringify(chData.error));
-        }
-        if (!chData.items || !chData.items.length) {
-            throw new Error('Không tìm thấy kênh trên YouTube.');
-        }
-
-        const item = chData.items[0];
-        const name = item.snippet.title || 'Unknown';
-        const handle = item.snippet.customUrl ? ('@' + item.snippet.customUrl) : (item.snippet.channelId || '');
-        const subscribers = Number(item.statistics.subscriberCount || 0);
-        const totalVideos = Number(item.statistics.videoCount || 0);
-        const totalViews = Number(item.statistics.viewCount || 0);
-        const created = item.snippet.publishedAt ? new Date(item.snippet.publishedAt).toLocaleDateString('vi-VN') : 'N/A';
-
-        const result = {
-            platform: 'YOUTUBE',
-            name,
-            handle,
-            url: `https://youtube.com/channel/${channelId}`,
-            created,
-            country: 'N/A',
-            subscribers,
-            totalVideos,
-            totalViews,
-            videos: []
-        };
-
-        // Try fetching recent videos (best-effort)
-        try {
-            const max = cfg.MAX_VIDEOS || 5;
-            const searchResp = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&maxResults=${max}&type=video&key=${key}`);
-            const searchData = await searchResp.json();
-            if (searchData.items && searchData.items.length) {
-                const videoIds = searchData.items.map(it => it.id.videoId).filter(Boolean).join(',');
-                if (videoIds) {
-                    const vidsResp = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${videoIds}&key=${key}`);
-                    const vidsData = await vidsResp.json();
-                    if (vidsData.items) {
-                        result.videos = vidsData.items.map(v => ({
-                            title: v.snippet.title,
-                            date: v.snippet.publishedAt ? new Date(v.snippet.publishedAt).toLocaleDateString('vi-VN') : 'N/A',
-                            views: Number(v.statistics.viewCount || 0),
-                            likes: Number(v.statistics.likeCount || 0),
-                            comments: Number(v.statistics.commentCount || 0),
-                            url: `https://youtube.com/watch?v=${v.id}`
-                        }));
-                    }
+        const max = cfg.MAX_VIDEOS || 5;
+        const searchResp = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&maxResults=${max}&type=video&key=${key}`);
+        const searchData = await searchResp.json();
+        if (searchData.items?.length) {
+            const videoIds = searchData.items.map(it => it.id.videoId).filter(Boolean).join(',');
+            if (videoIds) {
+                const vidsResp = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${videoIds}&key=${key}`);
+                const vidsData = await vidsResp.json();
+                if (vidsData.items) {
+                    result.videos = vidsData.items.map(v => ({
+                        title: v.snippet.title,
+                        date: v.snippet.publishedAt ? new Date(v.snippet.publishedAt).toLocaleDateString('vi-VN') : 'N/A',
+                        views: Number(v.statistics.viewCount || 0),
+                        likes: Number(v.statistics.likeCount || 0),
+                        comments: Number(v.statistics.commentCount || 0),
+                        url: `https://youtube.com/watch?v=${v.id}`
+                    }));
                 }
             }
-        } catch (e) {
-            // Non-fatal: continue without video details
-            console.warn('Không lấy được dữ liệu video:', e.message);
         }
-
-        return result;
-    } catch (err) {
-        throw new Error('YouTube API Error: ' + err.message);
+    } catch (e) {
+        console.warn('Không lấy được video details:', e.message);
     }
+
+    return result;
 }
 
 async function fetchTikTokData(url) {
-    // Try mock data first
     for (const key in MOCK_DATA) {
-        if (url.includes(key)) {
-            return MOCK_DATA[key];
-        }
+        if (url.includes(key)) return { ...MOCK_DATA[key], source: 'mock' };
     }
 
     const cfg = getConfig();
-    const key = cfg.RAPIDAPI_TIKTOK_KEY || cfg.RAPIDAPI_KEY;
+    let key = cfg.RAPIDAPI_TIKTOK_KEY || cfg.RAPIDAPI_KEY;
     if (!key) {
-        throw new Error('RapidAPI Key cho TikTok chưa được cấu hình. Mở Admin Panel và lưu RapidAPI TikTok Key.');
+        key = await getSupabaseApiKey('TikTok');
     }
+    if (!key) throw new Error('RapidAPI TikTok key chưa được cấu hình. Mở trang Cấu hình để thêm key hoặc cấu hình Supabase.');
 
-    // Extract username
     const m = url.match(/tiktok\.com\/@([\w.\-]+)/i);
     const username = m ? m[1] : null;
-    if (!username) throw new Error('Không thể trích username TikTok từ URL. Vui lòng kiểm tra link.');
+    if (!username) throw new Error('Không thể trích username TikTok từ URL.');
 
-    try {
-        const response = await fetch(`https://tiktok-api23.p.rapidapi.com/api/user/info?uniqueId=${encodeURIComponent(username)}`, {
-            method: 'GET',
-            headers: {
-                'x-rapidapi-key': key,
-                'x-rapidapi-host': 'tiktok-api23.p.rapidapi.com'
-            }
-        });
-        const data = await response.json();
-        if (!data || data.message || data.error) {
-            throw new Error(data.message || data.error || 'Phản hồi TikTok không hợp lệ');
-        }
+    const response = await fetch(`https://tiktok-api23.p.rapidapi.com/api/user/info?uniqueId=${encodeURIComponent(username)}`, {
+        method: 'GET',
+        headers: { 'x-rapidapi-key': key, 'x-rapidapi-host': 'tiktok-api23.p.rapidapi.com' }
+    });
+    const data = await response.json();
+    if (!data || data.message || data.error) throw new Error(data.message || data.error || 'Phản hồi TikTok không hợp lệ');
 
-        // Map response to internal format (best-effort)
-        const info = data.userInfo || data.user || data;
-        const result = {
-            platform: 'TIKTOK',
-            name: info.user?.nickname || info.nickname || username,
-            handle: '@' + username,
-            url: url,
-            created: info.createTime ? new Date(info.createTime * 1000).toLocaleDateString('vi-VN') : 'N/A',
-            country: info.country || 'N/A',
-            subscribers: Number(info.stats?.followerCount || info.followerCount || 0),
-            totalVideos: Number(info.stats?.videoCount || info.videoCount || 0),
-            totalViews: Number(info.stats?.playCount || 0),
-            videos: []
-        };
-
-        return result;
-    } catch (err) {
-        throw new Error('Lỗi khi gọi TikTok API: ' + err.message);
-    }
+    const info = data.userInfo || data.user || data;
+    return {
+        platform: 'TIKTOK',
+        name: info.user?.nickname || info.nickname || username,
+        handle: '@' + username,
+        url,
+        created: info.createTime ? new Date(info.createTime * 1000).toLocaleDateString('vi-VN') : 'N/A',
+        country: info.country || 'N/A',
+        subscribers: Number(info.stats?.followerCount || info.followerCount || 0),
+        totalVideos: Number(info.stats?.videoCount || info.videoCount || 0),
+        totalViews: Number(info.stats?.playCount || 0),
+        videos: []
+    };
 }
 
 async function fetchInstagramData(url) {
-    // Try mock data first
     for (const key in MOCK_DATA) {
-        if (url.includes(key)) {
-            return MOCK_DATA[key];
-        }
+        if (url.includes(key)) return { ...MOCK_DATA[key], source: 'mock' };
     }
 
     const cfg = getConfig();
-    const key = cfg.RAPIDAPI_INSTAGRAM_KEY || cfg.RAPIDAPI_KEY;
+    let key = cfg.RAPIDAPI_INSTAGRAM_KEY || cfg.RAPIDAPI_KEY;
     if (!key) {
-        throw new Error('RapidAPI Key cho Instagram chưa được cấu hình. Mở Admin Panel và lưu RapidAPI Instagram Key.');
+        key = await getSupabaseApiKey('Instagram');
     }
+    if (!key) throw new Error('RapidAPI Instagram key chưa được cấu hình. Mở trang Cấu hình để thêm key hoặc cấu hình Supabase.');
 
-    // Clean url and extract username
     const cleanUrl = url.split('?')[0].replace(/\/+$/, '');
     const m = cleanUrl.match(/instagram\.com\/([\w.\-]+)/i) || ['',''];
     const username = m[1];
-    if (!username || username === 'p' || username === 'reel') throw new Error('Không lấy được username từ: ' + url);
+    if (!username || username === 'p' || username === 'reel') throw new Error('Không lấy được username từ URL.');
 
     const IG_HOST = 'instagram-scraper-20251.p.rapidapi.com';
     const headers = { 'x-rapidapi-key': key, 'x-rapidapi-host': IG_HOST };
+    const uResp = await fetch(`https://${IG_HOST}/userinfo/?username_or_id=${encodeURIComponent(username)}`, { method: 'GET', headers });
+    const rawUser = await uResp.text();
+    let respUser = null;
+    try { respUser = JSON.parse(rawUser); } catch (e) { respUser = rawUser; }
+    const user = (respUser && (respUser.data || respUser.user || (respUser.graphql && respUser.graphql.user))) || respUser;
+    if (!user || (!user.username && !user.id && !user.pk)) throw new Error('Không lấy được thông tin Instagram.');
 
-    // Fetch user info
-    let user = null;
-    try {
-        const uResp = await fetch(`https://${IG_HOST}/userinfo/?username_or_id=${encodeURIComponent(username)}`, { method: 'GET', headers });
-        const rawUser = await uResp.text();
-        let respUser = null;
-        try { respUser = JSON.parse(rawUser); } catch(e) { respUser = rawUser; }
-        user = (respUser && (respUser.data || respUser.user || (respUser.graphql && respUser.graphql.user))) || respUser;
-        if (!user || (!user.username && !user.id && !user.pk)) {
-            throw new Error('IG user response: ' + (typeof rawUser === 'string' ? rawUser.slice(0,200) : JSON.stringify(rawUser).slice(0,200)));
-        }
-    } catch (err) {
-        throw new Error('Lỗi khi lấy thông tin IG user: ' + err.message);
-    }
-
-    // Try several endpoints to get posts
-    let posts = [];
     const max = cfg.MAX_VIDEOS || 5;
+    let posts = [];
     const postEndpoints = [
         `https://${IG_HOST}/user-posts/?username_or_id=${encodeURIComponent(username)}&count=${max}`,
         `https://${IG_HOST}/posts/?username_or_id_or_url=${encodeURIComponent(username)}&count=${max}`,
-        `https://${IG_HOST}/userposts/?username_or_id=${encodeURIComponent(username)}`,
     ];
 
-    for (let i = 0; i < postEndpoints.length; i++) {
+    for (const endpoint of postEndpoints) {
         try {
-            const pResp = await fetch(postEndpoints[i], { method: 'GET', headers });
+            const pResp = await fetch(endpoint, { method: 'GET', headers });
             const rawPosts = await pResp.text();
             let rp = null;
-            try { rp = JSON.parse(rawPosts); } catch(e) { rp = rawPosts; }
-
-            const items = (rp && (
-                (rp.data && rp.data.items) ||
-                (rp.data && Array.isArray(rp.data) && rp.data) ||
-                rp.items ||
-                (rp.response && rp.response.items) ||
-                rp.media || rp.medias || rp.items
-            )) || [];
-
+            try { rp = JSON.parse(rawPosts); } catch (e) { rp = rawPosts; }
+            const items = (rp && ((rp.data && rp.data.items) || (rp.data && Array.isArray(rp.data) && rp.data) || rp.items || (rp.response && rp.response.items) || rp.media || rp.medias)) || [];
             if (Array.isArray(items) && items.length > 0) {
                 posts = items.slice(0, max).map(p => {
-                    const caption = (p.caption && p.caption.text) ||
-                        (p.edge_media_to_caption && p.edge_media_to_caption.edges && p.edge_media_to_caption.edges[0] && p.edge_media_to_caption.edges[0].node && p.edge_media_to_caption.edges[0].node.text) ||
-                        p.title || p.content || '(Không có caption)';
+                    const caption = (p.caption && p.caption.text) || (p.edge_media_to_caption && p.edge_media_to_caption.edges && p.edge_media_to_caption.edges[0] && p.edge_media_to_caption.edges[0].node && p.edge_media_to_caption.edges[0].node.text) || p.title || p.content || '(Không có caption)';
                     const date = p.taken_at ? new Date(p.taken_at * 1000).toLocaleDateString('vi-VN') : (p.timestamp ? new Date(p.timestamp * 1000).toLocaleDateString('vi-VN') : '—');
                     const views = parseInt(p.play_count || p.view_count || p.video_view_count || (p.video_stats && p.video_stats.view_count) || 0) || 0;
                     const likes = parseInt(p.like_count || (p.edge_media_preview_like && p.edge_media_preview_like.count) || (p.edge_liked_by && p.edge_liked_by.count) || 0) || 0;
                     const comments = parseInt(p.comment_count || (p.edge_media_to_comment && p.edge_media_to_comment.count) || 0) || 0;
                     const urlp = p.code ? ('https://instagram.com/p/' + p.code + '/') : (p.link || p.url || ('https://instagram.com/' + username + '/'));
-                    return {
-                        title: String(caption).slice(0,100),
-                        date,
-                        views,
-                        likes,
-                        comments,
-                        url: urlp
-                    };
+                    return { title: String(caption).slice(0, 100), date, views, likes, comments, url: urlp };
                 });
                 break;
             }
         } catch (e) {
-            // try next endpoint
-            console.warn('IG posts endpoint ' + i + ' error: ' + (e && e.message));
+            console.warn('IG endpoint error:', e.message);
         }
     }
 
@@ -478,88 +476,58 @@ async function fetchInstagramData(url) {
     };
 }
 
-// ========== RENDER RESULTS ==========
-
 function renderResultCard(data, platform) {
     const platformInfo = PLATFORM_COLORS[platform] || PLATFORM_COLORS.UNKNOWN;
     const card = document.createElement('div');
     card.className = `result-card ${platformInfo.class}`;
 
-    // Card Header
     const header = document.createElement('div');
-    header.className = `card-header ${platformInfo.class}`;
+    header.className = 'card-header';
     header.innerHTML = `
-        <div class="channel-info">
-            <span class="platform-badge ${platformInfo.class}">${platformInfo.name}</span>
-            <div class="channel-details">
-                <div class="channel-name">${data.name || 'Unknown'}</div>
-                <div class="channel-handle">${data.handle || 'N/A'}</div>
-            </div>
+        <div>
+            <span class="platform-badge">${platformInfo.name}</span>
+            <div class="channel-name">${data.name || 'Unknown'}</div>
+            <div class="channel-handle">${data.handle || 'N/A'}</div>
+            <div class="channel-meta">${data.country || 'N/A'} • ${data.created || 'N/A'}</div>
         </div>
         <a href="${data.url}" target="_blank" class="channel-link">🔗 Xem kênh</a>
     `;
 
-    // Stats Grid
-    const stats = document.createElement('div');
-    stats.className = 'stats-grid';
-    stats.innerHTML = `
-        <div class="stat-item">
-            <div class="stat-label">👥 Followers</div>
-            <div class="stat-value number">${formatNumber(data.subscribers)}</div>
-        </div>
-        <div class="stat-item">
-            <div class="stat-label">🎬 Videos</div>
-            <div class="stat-value number">${formatNumber(data.totalVideos)}</div>
-        </div>
-        <div class="stat-item">
-            <div class="stat-label">👁 Views</div>
-            <div class="stat-value number">${formatNumber(data.totalViews)}</div>
-        </div>
-        <div class="stat-item">
-            <div class="stat-label">📅 Tạo</div>
-            <div class="stat-value">${data.created || 'N/A'}</div>
-        </div>
-        <div class="stat-item">
-            <div class="stat-label">🌏 Quốc gia</div>
-            <div class="stat-value">${data.country || 'N/A'}</div>
-        </div>
+    const summaryGrid = document.createElement('div');
+    summaryGrid.className = 'summary-grid';
+    summaryGrid.innerHTML = `
+        <div class="summary-item"><div class="label">Followers</div><div class="value">${formatNumber(data.subscribers)}</div></div>
+        <div class="summary-item"><div class="label">Videos</div><div class="value">${formatNumber(data.totalVideos)}</div></div>
+        <div class="summary-item"><div class="label">Views</div><div class="value">${formatNumber(data.totalViews)}</div></div>
+        <div class="summary-item"><div class="label">Score</div><div class="value">${calculateEngagementScore(data)}</div></div>
     `;
 
-    // Videos Section
-    let videosHTML = '<div class="videos-section"><div class="videos-title">📹 Video gần đây</div>';
-    
-    if (data.videos && data.videos.length > 0) {
-        videosHTML += '<table class="videos-table"><thead><tr><th>#</th><th>Tiêu đề</th><th>Ngày</th><th>Views</th><th>Likes</th><th>Comments</th><th>Link</th></tr></thead><tbody>';
-        
-        data.videos.forEach((video, index) => {
-            videosHTML += `
-                <tr>
-                    <td>${index + 1}</td>
-                    <td class="video-title">${video.title}</td>
-                    <td>${video.date}</td>
-                    <td class="stat-value number">${formatNumber(video.views)}</td>
-                    <td class="stat-value number">${formatNumber(video.likes)}</td>
-                    <td class="stat-value number">${formatNumber(video.comments)}</td>
-                    <td><a href="${video.url}" target="_blank" class="video-link">🔗</a></td>
-                </tr>
+    const videoList = document.createElement('div');
+    videoList.className = 'video-list';
+    if (data.videos?.length) {
+        data.videos.forEach(video => {
+            videoList.innerHTML += `
+                <div class="video-item">
+                    <div class="video-title">${video.title}</div>
+                    <div class="video-meta">
+                        <span>${video.date || '—'}</span>
+                        <span>👁 ${formatNumber(video.views)}</span>
+                        <span>👍 ${formatNumber(video.likes)}</span>
+                        <span>💬 ${formatNumber(video.comments)}</span>
+                        <a class="video-link-inline" href="${video.url}" target="_blank">Xem</a>
+                    </div>
+                </div>
             `;
         });
-        
-        videosHTML += '</tbody></table>';
     } else {
-        videosHTML += '<p style="color: var(--text-muted); padding: 15px;">Không có dữ liệu video</p>';
+        videoList.innerHTML = '<div class="video-item"><div class="video-title">Không có video gần đây</div></div>';
     }
-    
-    videosHTML += '</div>';
 
-    // Assemble card
     card.appendChild(header);
-    card.appendChild(stats);
-    card.innerHTML += videosHTML;
+    card.appendChild(summaryGrid);
+    card.appendChild(videoList);
     resultsContainer.appendChild(card);
 }
-
-// ========== UTILITY FUNCTIONS ==========
 
 function formatNumber(num) {
     if (!num || num === 0) return '0';
@@ -569,20 +537,23 @@ function formatNumber(num) {
     return num.toString();
 }
 
+function calculateEngagementScore(data) {
+    const subscribers = Number(data.subscribers || 0);
+    const views = Number(data.totalViews || 0);
+    const videos = Number(data.totalVideos || 0);
+    const score = Math.round((subscribers / 1000000) + (views / 100000000) + (videos / 100));
+    return score > 100 ? '100+' : score;
+}
+
 function showStatus(message, type = 'info') {
     statusBar.classList.add('active');
     statusBar.classList.remove('loading', 'success', 'error');
     statusBar.classList.add(type);
-    
     const spinner = type === 'loading' ? '<span class="loader"></span>' : '';
     statusBar.innerHTML = spinner + message;
 }
 
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-// ========== HISTORY MANAGEMENT ==========
+function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
 function saveToHistory(links, results, errors) {
     const historyItem = {
@@ -607,43 +578,35 @@ function saveToHistory(links, results, errors) {
 
     let history = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY)) || [];
     history.unshift(historyItem);
-    
-    // Keep only latest 50 items
-    if (history.length > MAX_HISTORY_ITEMS) {
-        history = history.slice(0, MAX_HISTORY_ITEMS);
-    }
-    
+    if (history.length > MAX_HISTORY_ITEMS) history = history.slice(0, MAX_HISTORY_ITEMS);
     localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
     loadHistory();
+    return historyItem;
 }
 
 function loadHistory() {
     const history = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY)) || [];
-    
     if (history.length === 0) {
         historyContainer.innerHTML = '<p class="history-empty">Chưa có lịch sử phân tích nào</p>';
         return;
     }
 
-    historyContainer.innerHTML = history.map((item, index) => `
+    historyContainer.innerHTML = history.map(item => `
         <div class="history-item" data-id="${item.id}">
-            <div class="history-info">
+            <div>
                 <div class="history-time">🕐 ${item.timestamp}</div>
-                <div class="history-stats">
-                    📊 ${item.linksCount} link • ✅ ${item.successCount} thành công • ❌ ${item.errorCount} lỗi
-                </div>
+                <div class="history-stats">📊 ${item.linksCount} link • ✅ ${item.successCount} thành công • ❌ ${item.errorCount} lỗi</div>
                 <div class="history-results">
-                    ${item.results.map(r => `<span class="history-tag ${r.platform.toLowerCase()}">${r.platform}: ${r.name}</span>`).join('')}
+                    ${item.results.map(r => `<span class="history-tag">${r.platform}: ${r.name}</span>`).join('')}
                 </div>
             </div>
             <div class="history-actions">
-                <button class="btn btn-small" onclick="showHistoryDetail(${item.id})">🔍 Xem chi tiết</button>
+                <button class="btn btn-small btn-secondary" onclick="showHistoryDetail(${item.id})">🔍 Xem</button>
                 <button class="history-delete-btn" onclick="deleteHistoryItem(${item.id})">✕</button>
             </div>
         </div>
     `).join('');
 
-    // Attach export button handler (exists in DOM)
     const exportBtn = document.getElementById('export-history-btn');
     if (exportBtn) exportBtn.onclick = exportHistoryToCSV;
 }
@@ -651,10 +614,7 @@ function loadHistory() {
 function showHistoryDetail(id) {
     const history = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY)) || [];
     const item = history.find(h => h.id === id);
-    if (!item) {
-        alert('Không tìm thấy mục lịch sử.');
-        return;
-    }
+    if (!item) { alert('Không tìm thấy mục lịch sử.'); return; }
 
     const modal = document.getElementById('history-modal');
     const body = document.getElementById('history-modal-body');
@@ -664,20 +624,16 @@ function showHistoryDetail(id) {
     title.textContent = `Chi tiết: ${item.timestamp}`;
     let html = `<p>Links: ${item.linksCount} • Thành công: ${item.successCount} • Lỗi: ${item.errorCount}</p>`;
     html += '<h4>Chi tiết kết quả</h4>';
-    if (item.results && item.results.length) {
+    if (item.results?.length) {
         html += '<ul style="padding-left:18px;">';
         item.results.forEach(r => {
             html += `<li><strong>${r.platform}</strong>: ${r.name} — <a href="${r.link}" target="_blank">Xem</a></li>`;
         });
         html += '</ul>';
-    } else {
-        html += '<p>Không có kết quả chi tiết.</p>';
-    }
+    } else html += '<p>Không có kết quả chi tiết.</p>';
 
     body.innerHTML = html;
     modal.style.display = 'flex';
-
-    // Close handlers
     closeBtn.onclick = () => { modal.style.display = 'none'; };
     modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
 }
@@ -685,37 +641,18 @@ function showHistoryDetail(id) {
 function exportHistoryToCSV() {
     const history = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY)) || [];
     if (!history.length) { alert('Không có lịch sử để xuất.'); return; }
-
-    // Build CSV rows: one row per result entry with parent metadata
-    const rows = [];
-    rows.push(['history_id','timestamp','links_count','success_count','error_count','platform','name','link'].join(','));
+    const rows = [['history_id', 'timestamp', 'links_count', 'success_count', 'error_count', 'platform', 'name', 'link'].join(',')];
     history.forEach(h => {
-        if (h.results && h.results.length) {
-            h.results.forEach(r => {
-                const row = [
-                    '"' + h.id + '"',
-                    '"' + h.timestamp + '"',
-                    h.linksCount,
-                    h.successCount,
-                    h.errorCount,
-                    '"' + (r.platform || '') + '"',
-                    '"' + (r.name || '') + '"',
-                    '"' + (r.link || '') + '"'
-                ];
-                rows.push(row.join(','));
-            });
-        } else {
-            const row = ['"' + h.id + '"', '"' + h.timestamp + '"', h.linksCount, h.successCount, h.errorCount, '', '', ''];
-            rows.push(row.join(','));
-        }
+        if (h.results?.length) {
+            h.results.forEach(r => rows.push(['"' + h.id + '"', '"' + h.timestamp + '"', h.linksCount, h.successCount, h.errorCount, '"' + (r.platform || '') + '"', '"' + (r.name || '') + '"', '"' + (r.link || '') + '"'].join(',')));
+        } else rows.push(['"' + h.id + '"', '"' + h.timestamp + '"', h.linksCount, h.successCount, h.errorCount, '', '', ''].join(','));
     });
-
     const csv = rows.join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'analyzer_history_' + (new Date()).toISOString().slice(0,19).replace(/[:T]/g,'-') + '.csv';
+    a.download = 'analyzer_history_' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-') + '.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -726,8 +663,9 @@ function handleClearHistory() {
     if (confirm('⚠️ Bạn có chắc muốn xóa toàn bộ lịch sử?')) {
         localStorage.removeItem(HISTORY_STORAGE_KEY);
         loadHistory();
+        updateOverview();
         showStatus('✅ Lịch sử đã xóa!', 'success');
-        setTimeout(() => statusBar.classList.remove('active'), 2000);
+        setTimeout(() => statusBar.classList.remove('active'), 1800);
     }
 }
 
@@ -736,9 +674,174 @@ function deleteHistoryItem(id) {
     history = history.filter(item => item.id !== id);
     localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
     loadHistory();
+    updateOverview();
 }
 
-// ========== EXTRACT HELPERS (Ready for real API) ==========
+async function syncResultsToExternal(results, links, historyItem) {
+    const cfg = getConfig();
+    const payload = {
+        source: 'social-analyzer',
+        timestamp: new Date().toISOString(),
+        links,
+        results,
+        summary: {
+            profileCount: results.length,
+            successCount: results.length,
+            errorCount: historyItem?.errorCount || 0,
+        }
+    };
+
+    const hasSupabase = Boolean(cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY);
+    const hasEndpoint = Boolean(cfg.API_ENDPOINT);
+    if (!hasSupabase && !hasEndpoint) {
+        return { success: false, reason: 'no-sync-configured' };
+    }
+
+    const syncReport = {
+        success: false,
+        supabase: { attempted: false, success: false, error: '' },
+        endpoint: { attempted: false, success: false, error: '' }
+    };
+
+    if (hasSupabase) {
+        syncReport.supabase.attempted = true;
+        try {
+            const baseUrl = cfg.SUPABASE_URL.replace(/\/$/, '');
+            const historyRows = [];
+            results.forEach(item => {
+                const channelName = item.name || item.handle || 'Unknown';
+                const rowTimestamp = new Date().toISOString();
+
+                if (Array.isArray(item.videos) && item.videos.length) {
+                    item.videos.slice(0, 5).forEach(video => {
+                        historyRows.push({
+                            link_video: video.url || item.url || '',
+                            'kênh': channelName,
+                            views: String(video.views || 0),
+                            likes: String(video.likes || 0),
+                            comments: String(video.comments || 0),
+                            created_at: rowTimestamp
+                        });
+                    });
+                } else {
+                    historyRows.push({
+                        link_video: item.url || '',
+                        'kênh': channelName,
+                        views: String(item.totalViews || item.views || 0),
+                        likes: String(item.totalVideos || item.likes || 0),
+                        comments: String(item.subscribers || item.comments || 0),
+                        created_at: rowTimestamp
+                    });
+                }
+            });
+
+            if (historyRows.length === 0) {
+                throw new Error('Không có hàng dữ liệu để lưu vào History_API_Analyst.');
+            }
+
+            const response = await fetch(`${baseUrl}/rest/v1/History_API_Analyst`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': cfg.SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${cfg.SUPABASE_ANON_KEY}`,
+                    'Prefer': 'return=minimal'
+                },
+                body: JSON.stringify(historyRows)
+            });
+            if (!response.ok) {
+                const errorText = await response.text().catch(() => 'Không thể đọc lỗi từ Supabase');
+                const friendly = interpretSupabaseError(errorText);
+                throw new Error(`Supabase insert failed: ${response.status} ${friendly || errorText}`);
+            }
+            syncReport.supabase.success = true;
+            syncReport.success = true;
+        } catch (error) {
+            syncReport.supabase.error = error.message || String(error);
+            syncReport.success = false;
+            console.warn('Supabase sync failed:', syncReport.supabase.error);
+        }
+    }
+
+    if (hasEndpoint) {
+        syncReport.endpoint.attempted = true;
+        try {
+            const response = await fetch(cfg.API_ENDPOINT, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) throw new Error(`API endpoint: ${response.status}`);
+            syncReport.endpoint.success = true;
+            syncReport.success = true;
+        } catch (error) {
+            syncReport.endpoint.error = error.message || String(error);
+            console.warn('API sync failed:', syncReport.endpoint.error);
+        }
+    }
+
+    const now = new Date().toLocaleString('vi-VN');
+    if (syncReport.attempted || syncReport.success) {
+        localStorage.setItem('last_sync_time', now);
+        localStorage.setItem('last_sync_status', syncReport.success ? 'success' : 'failed');
+    }
+    console.info('🔄 Sync report', syncReport);
+    return syncReport;
+}
+
+async function handleSyncNow() {
+    const history = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY)) || [];
+    const latest = history[0];
+    if (!latest) {
+        showStatus('⚠️ Chưa có dữ liệu để đồng bộ. Hãy phân tích trước.', 'error');
+        return;
+    }
+    showStatus('☁️ Đang đồng bộ dữ liệu...', 'loading');
+    const syncReport = await syncResultsToExternal(latest.results || [], latest.results?.map(r => r.link) || [], latest);
+    updateOverview();
+
+    if (syncReport.success) {
+        showStatus('✅ Đồng bộ hoàn tất thành công.', 'success');
+    } else if (syncReport.supabase.attempted || syncReport.endpoint.attempted) {
+        showStatus('⚠️ Đồng bộ không hoàn thành. Kiểm tra cấu hình Supabase/API.', 'error');
+    } else {
+        showStatus('⚠️ Chưa cấu hình Supabase/API để đồng bộ.', 'error');
+    }
+}
+
+function updateOverview() {
+    const history = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY)) || [];
+    const total = history.length;
+    const successes = history.reduce((sum, item) => sum + (item.successCount || 0), 0);
+    const lastSync = localStorage.getItem('last_sync_time');
+    const lastSyncStatus = localStorage.getItem('last_sync_status');
+    const syncLabel = lastSync ? (lastSyncStatus === 'success' ? `OK (${lastSync})` : `Lỗi (${lastSync})`) : 'Chưa sync';
+    if (overviewTotal) overviewTotal.textContent = total;
+    if (overviewSuccess) overviewSuccess.textContent = successes;
+    if (overviewSync) overviewSync.textContent = syncLabel;
+}
+
+async function autoSyncLatestHistory() {
+    const cfg = getConfig();
+    if (!cfg.SYNC_ENABLED) return;
+
+    const history = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY)) || [];
+    const latest = history[0];
+    if (!latest) return;
+
+    const lastSyncedId = localStorage.getItem('last_synced_history_id');
+    if (lastSyncedId && Number(lastSyncedId) === latest.id) return;
+
+    console.info('🔄 Auto-sync latest history:', latest.id);
+    const syncReport = await syncResultsToExternal(latest.results || [], latest.results?.map(r => r.link) || [], latest);
+    if (syncReport.success) {
+        localStorage.setItem('last_synced_history_id', String(latest.id));
+        showStatus('✅ Đồng bộ tự động thành công với bản ghi mới nhất.', 'success');
+    } else {
+        showStatus(`⚠️ Đồng bộ tự động thất bại: ${syncReport.supabase.error || syncReport.endpoint.error || 'Kiểm tra cấu hình.'}`, 'error');
+    }
+    updateOverview();
+}
 
 function extractYouTubeChannelId(url) {
     const match = url.match(/youtube\.com\/channel\/(UC[\w-]{22})/);
@@ -753,5 +856,5 @@ function extractYouTubeHandle(url) {
     return null;
 }
 
-console.log('🎬 Social Media Analyzer loaded!');
-console.log('📌 Hướng dẫn: Thêm API keys ở phần cấu hình để bắt đầu phân tích kênh thật.');
+console.log('🎬 Social Intelligence Hub loaded');
+console.log('🔌 Supabase/API sync sẽ tự động chạy nếu đã cấu hình ở trang Admin');
