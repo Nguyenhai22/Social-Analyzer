@@ -1,765 +1,260 @@
-/* ============ ROOT & GENERAL ============ */
 :root {
-    --primary-dark: #0f172a;
-    --primary-light: #1e293b;
-    --text-primary: #ffffff;
-    --text-secondary: #cbd5e1;
-    --text-muted: #94a3b8;
-    --border-color: #334155;
-    --success-color: #10b981;
-    --warning-color: #f59e0b;
-    
-    /* Platform Colors */
-    --yt-red: #ff0000;
-    --yt-red-light: #ffe0e0;
-    --tiktok-black: #010101;
-    --tiktok-pink: #ee1d52;
-    --ig-purple: #833ab4;
-    --ig-pink: #e1306c;
-    --ig-light: #fdf0ff;
-    --twitch-purple: #6441a5;
-    --pinterest-red: #e60023;
-    --linkedin-blue: #0a66c2;
-    --facebook-blue: #1877f2;
-    --twitter-black: #000000;
-    
-    --transition: 0.3s ease;
+    --bg: #07111f;
+    --panel: #0f172a;
+    --panel-2: #111c31;
+    --border: rgba(148, 163, 184, 0.2);
+    --text: #f8fafc;
+    --muted: #94a3b8;
+    --accent: #60a5fa;
+    --accent-2: #818cf8;
+    --success: #34d399;
+    --warning: #fbbf24;
+    --danger: #f87171;
+    --yt-red: #ff4d4f;
+    --tiktok-pink: #ec4899;
+    --ig-pink: #f43f5e;
+    --twitch-purple: #8b5cf6;
+    --transition: 0.25s ease;
 }
 
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-html {
-    scroll-behavior: smooth;
-}
-
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
-    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-light) 100%);
-    color: var(--text-primary);
+    font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+    background: radial-gradient(circle at top left, #14213d 0%, var(--bg) 55%, #050b14 100%);
+    color: var(--text);
     line-height: 1.6;
     min-height: 100vh;
 }
 
-/* ============ CONTAINER ============ */
+a { color: inherit; }
 .container {
-    max-width: 1200px;
+    max-width: 1240px;
     margin: 0 auto;
-    padding: 0 20px;
+    padding: 24px 20px 40px;
 }
 
-/* ============ HEADER ============ */
-.header {
-    background: linear-gradient(135deg, rgba(255, 0, 0, 0.1) 0%, rgba(238, 29, 82, 0.1) 50%, rgba(131, 58, 180, 0.1) 100%);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--border-color);
-    padding: 40px 20px;
-    margin-bottom: 40px;
-    border-radius: 16px;
-    margin-top: 20px;
+.hero-panel,
+.panel,
+.modal-content {
+    background: rgba(15, 23, 42, 0.82);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--border);
+    box-shadow: 0 20px 45px rgba(2, 8, 23, 0.35);
 }
 
-.header-content {
-    text-align: center;
+.hero-panel {
+    border-radius: 24px;
+    padding: 28px;
+    margin-bottom: 18px;
 }
 
-.logo {
-    font-size: 2.5rem;
-    font-weight: 700;
-    margin-bottom: 10px;
-    background: linear-gradient(135deg, #ff0000, #ee1d52, #833ab4);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+.hero-content {
+    display: grid;
+    grid-template-columns: 1.3fr 0.7fr;
+    gap: 24px;
+    align-items: center;
 }
 
-.subtitle {
-    font-size: 1.1rem;
-    color: var(--text-secondary);
-    font-weight: 400;
-}
-
-/* ============ MAIN ============ */
-.main {
-    padding: 20px 0;
-}
-
-/* ============ INPUT SECTION ============ */
-.input-section {
-    background: var(--primary-light);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 30px;
-    margin-bottom: 30px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-}
-
-.input-container {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.input-label {
-    display: block;
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--text-primary);
+.eyebrow {
+    display: inline-block;
+    font-size: 0.76rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #93c5fd;
     margin-bottom: 8px;
+    font-weight: 700;
 }
 
-.links-input {
-    background: var(--primary-dark);
-    border: 2px solid var(--border-color);
-    border-radius: 8px;
-    padding: 15px;
-    color: var(--text-primary);
-    font-family: 'Monaco', 'Menlo', monospace;
-    font-size: 0.95rem;
-    resize: vertical;
-    transition: all var(--transition);
+.hero-text h1 {
+    font-size: clamp(1.7rem, 3vw, 2.5rem);
+    margin-bottom: 10px;
+    line-height: 1.2;
 }
 
-.links-input:focus {
-    outline: none;
-    border-color: var(--yt-red);
-    box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.1);
+.hero-text p {
+    color: var(--muted);
+    max-width: 700px;
 }
 
-.links-input::placeholder {
-    color: var(--text-muted);
-}
-
-/* ============ BUTTONS ============ */
-.input-actions {
+.hero-actions,
+.input-actions,
+.history-actions {
     display: flex;
-    gap: 12px;
     flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 16px;
 }
 
 .btn {
-    padding: 12px 24px;
     border: none;
-    border-radius: 8px;
-    font-size: 1rem;
+    border-radius: 999px;
+    padding: 11px 18px;
+    font-size: 0.95rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all var(--transition);
-    text-transform: none;
-    font-family: inherit;
+    transition: transform var(--transition), box-shadow var(--transition), background var(--transition);
 }
 
+.btn:hover { transform: translateY(-2px); }
 .btn-primary {
-    background: linear-gradient(135deg, var(--yt-red), #ff3333);
     color: white;
-    flex: 1;
-    min-width: 150px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    box-shadow: 0 12px 24px rgba(96, 165, 250, 0.2);
+}
+.btn-secondary,
+.btn-ghost {
+    color: var(--text);
+    background: rgba(148, 163, 184, 0.12);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+}
+.btn-ghost:hover { background: rgba(148, 163, 184, 0.2); }
+.btn-danger {
+    color: #fecaca;
+    background: rgba(248, 113, 113, 0.14);
+    border: 1px solid rgba(248, 113, 113, 0.28);
+}
+.btn-small { padding: 9px 14px; font-size: 0.9rem; }
+.wide { flex: 1; min-width: 180px; }
+
+.hero-stats {
+    display: grid;
+    gap: 10px;
 }
 
-.btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(255, 0, 0, 0.3);
+.overview-card {
+    padding: 16px 18px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(96, 165, 250, 0.16), rgba(129, 140, 248, 0.14));
+    border: 1px solid rgba(96, 165, 250, 0.25);
+}
+.overview-label { color: var(--muted); font-size: 0.88rem; }
+.overview-value { font-size: 1.4rem; font-weight: 700; color: var(--text); }
+
+.main-grid {
+    display: grid;
+    gap: 18px;
+}
+.panel {
+    border-radius: 22px;
+    padding: 22px;
+}
+.panel-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 16px; }
+.panel-header h2 { font-size: 1.15rem; }
+
+.input-label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--muted);
+    font-weight: 600;
+}
+.links-input {
+    width: 100%;
+    min-height: 140px;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 16px;
+    padding: 14px 16px;
+    background: rgba(2, 8, 23, 0.55);
+    color: var(--text);
+    resize: vertical;
+    font-family: Consolas, monospace;
+}
+.links-input:focus { outline: 2px solid rgba(96, 165, 250, 0.28); border-color: rgba(96, 165, 250, 0.45); }
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.chip-btn {
+    border: 1px solid rgba(96, 165, 250, 0.2);
+    background: rgba(96, 165, 250, 0.1);
+    color: #dbeafe;
+    padding: 7px 12px;
+    border-radius: 999px;
+    cursor: pointer;
 }
 
-.btn-primary:active {
-    transform: translateY(0);
-}
-
-.btn-secondary {
-    background: var(--primary-dark);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
-}
-
-.btn-secondary:hover {
-    background: var(--border-color);
-}
-
-.btn-demo {
-    background: linear-gradient(135deg, var(--ig-purple), var(--tiktok-pink));
-    color: white;
-}
-
-.btn-demo:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(238, 29, 82, 0.3);
-}
-
-.btn-small {
-    padding: 8px 16px;
-    font-size: 0.9rem;
-    min-width: auto;
-}
-
-/* ============ STATUS BAR ============ */
 .status-bar {
-    min-height: 40px;
-    padding: 12px 16px;
-    border-radius: 8px;
-    margin-bottom: 20px;
+    min-height: 46px;
+    padding: 12px 14px;
+    border-radius: 14px;
     display: none;
     align-items: center;
     gap: 10px;
-    font-weight: 500;
-}
-
-.status-bar.active {
-    display: flex;
-}
-
-.status-bar.loading {
-    background: rgba(59, 130, 246, 0.1);
-    border: 1px solid var(--text-secondary);
-    color: var(--text-secondary);
-}
-
-.status-bar.success {
-    background: rgba(16, 185, 129, 0.1);
-    border: 1px solid var(--success-color);
-    color: var(--success-color);
-}
-
-.status-bar.error {
-    background: rgba(239, 68, 68, 0.1);
-    border: 1px solid #ef4444;
-    color: #fca5a5;
-}
-
-/* ============ RESULTS SECTION ============ */
-.results-section {
-    margin-bottom: 40px;
-}
-
-.results-container {
-    display: grid;
-    gap: 20px;
-}
-
-.empty-state {
-    text-align: center;
-    padding: 60px 20px;
-    color: var(--text-muted);
-    font-size: 1.1rem;
-}
-
-/* ============ RESULT CARD ============ */
-.result-card {
-    background: var(--primary-light);
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-    animation: slideIn 0.5s ease forwards;
-    border-left: 5px solid var(--border-color);
-}
-
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Platform-specific borders */
-.result-card.youtube { border-left-color: var(--yt-red); }
-.result-card.tiktok { border-left-color: var(--tiktok-pink); }
-.result-card.instagram { border-left-color: var(--ig-pink); }
-.result-card.twitch { border-left-color: var(--twitch-purple); }
-.result-card.pinterest { border-left-color: var(--pinterest-red); }
-.result-card.linkedin { border-left-color: var(--linkedin-blue); }
-.result-card.facebook { border-left-color: var(--facebook-blue); }
-.result-card.twitter { border-left-color: var(--twitter-black); }
-
-/* ============ CARD HEADER ============ */
-.card-header {
-    padding: 20px;
-    border-bottom: 1px solid var(--border-color);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 15px;
-}
-
-.card-header.youtube { background: rgba(255, 0, 0, 0.05); }
-.card-header.tiktok { background: rgba(238, 29, 82, 0.05); }
-.card-header.instagram { background: rgba(131, 58, 180, 0.05); }
-.card-header.twitch { background: rgba(100, 65, 165, 0.05); }
-.card-header.pinterest { background: rgba(230, 0, 35, 0.05); }
-.card-header.linkedin { background: rgba(10, 102, 194, 0.05); }
-.card-header.facebook { background: rgba(24, 119, 242, 0.05); }
-.card-header.twitter { background: rgba(0, 0, 0, 0.05); }
-
-.channel-info {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    flex: 1;
-    min-width: 200px;
-}
-
-.platform-badge {
-    display: inline-block;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 0.9rem;
     font-weight: 600;
-    white-space: nowrap;
+    margin-bottom: 14px;
+}
+.status-bar.active { display: flex; }
+.status-bar.loading { background: rgba(96, 165, 250, 0.14); color: #bfdbfe; border: 1px solid rgba(96, 165, 250, 0.25); }
+.status-bar.success { background: rgba(52, 211, 153, 0.16); color: #bbf7d0; border: 1px solid rgba(52, 211, 153, 0.28); }
+.status-bar.error { background: rgba(248, 113, 113, 0.16); color: #fecaca; border: 1px solid rgba(248, 113, 113, 0.28); }
+
+.insight-list { display: grid; gap: 10px; }
+.insight-item { display: flex; gap: 10px; padding: 12px 14px; border-radius: 14px; background: rgba(148, 163, 184, 0.08); }
+.insight-item strong { display: block; margin-bottom: 2px; }
+.insight-item p { color: var(--muted); font-size: 0.92rem; }
+
+.results-container { display: grid; gap: 14px; }
+.empty-state { padding: 28px 10px; text-align: center; color: var(--muted); }
+.result-card { border-radius: 18px; overflow: hidden; border: 1px solid rgba(148, 163, 184, 0.16); background: rgba(2, 8, 23, 0.45); animation: fadeUp 0.35s ease; }
+.result-card.youtube { border-left: 4px solid var(--yt-red); }
+.result-card.tiktok { border-left: 4px solid var(--tiktok-pink); }
+.result-card.instagram { border-left: 4px solid var(--ig-pink); }
+.result-card.twitch { border-left: 4px solid var(--twitch-purple); }
+.result-card.pinterest { border-left: 4px solid #fb7185; }
+.result-card.linkedin { border-left: 4px solid #38bdf8; }
+.result-card.facebook { border-left: 4px solid #60a5fa; }
+.result-card.twitter { border-left: 4px solid #111827; }
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; padding: 16px 18px; background: rgba(148, 163, 184, 0.08); }
+.platform-badge { display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 999px; font-size: 0.85rem; font-weight: 700; background: rgba(96, 165, 250, 0.12); color: #bfdbfe; }
+.channel-name { font-size: 1.12rem; font-weight: 700; }
+.channel-handle, .channel-meta { color: var(--muted); font-size: 0.92rem; }
+.channel-link { color: #93c5fd; font-weight: 600; text-decoration: none; }
+.channel-link:hover { text-decoration: underline; }
+
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; padding: 16px 18px 0; }
+.summary-item { padding: 10px 12px; border-radius: 12px; background: rgba(148, 163, 184, 0.08); }
+.summary-item .label { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.summary-item .value { font-size: 1rem; font-weight: 700; margin-top: 2px; }
+
+.video-list { display: grid; gap: 8px; padding: 16px 18px 18px; }
+.video-item { padding: 10px 12px; border-radius: 12px; background: rgba(2, 8, 23, 0.55); border: 1px solid rgba(148, 163, 184, 0.14); }
+.video-item .video-title { font-weight: 600; margin-bottom: 4px; }
+.video-meta { color: var(--muted); font-size: 0.86rem; display: flex; flex-wrap: wrap; gap: 8px; }
+.video-link-inline { color: #93c5fd; font-weight: 600; text-decoration: none; }
+
+.platforms-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.platform-card { padding: 16px; border-radius: 16px; background: rgba(2, 8, 23, 0.45); border: 1px solid rgba(148, 163, 184, 0.16); }
+.platform-card h3 { margin: 6px 0 4px; }
+.platform-card small { color: var(--muted); display: block; }
+.platform-youtube { border-color: rgba(255, 77, 79, 0.3); }
+.platform-tiktok { border-color: rgba(236, 72, 153, 0.3); }
+.platform-instagram { border-color: rgba(244, 63, 94, 0.3); }
+.platform-twitch { border-color: rgba(139, 92, 246, 0.3); }
+
+.history-container { display: grid; gap: 10px; }
+.history-item { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 12px 14px; border-radius: 14px; background: rgba(2, 8, 23, 0.45); border: 1px solid rgba(148, 163, 184, 0.14); }
+.history-time { font-weight: 700; margin-bottom: 4px; }
+.history-stats, .history-results, .history-empty { color: var(--muted); font-size: 0.92rem; }
+.history-tag { display: inline-block; padding: 4px 9px; border-radius: 999px; margin-right: 6px; margin-top: 6px; background: rgba(96, 165, 250, 0.12); color: #bfdbfe; font-size: 0.8rem; }
+.history-delete-btn { border: 1px solid rgba(248, 113, 113, 0.2); background: transparent; color: var(--danger); width: 30px; height: 30px; border-radius: 8px; cursor: pointer; }
+
+.footer { text-align: center; color: var(--muted); margin-top: 20px; padding: 12px 0 8px; }
+.modal-content { max-width: 860px; width: min(92vw, 860px); border-radius: 20px; padding: 18px; color: var(--text); }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.modal-body { max-height: 70vh; overflow: auto; }
+.hidden { display: none !important; }
+.loader { display: inline-block; width: 15px; height: 15px; border: 2px solid rgba(255,255,255,0.25); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 840px) {
+    .hero-content { grid-template-columns: 1fr; }
+    .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-.platform-badge.youtube { background: rgba(255, 0, 0, 0.2); color: var(--yt-red); }
-.platform-badge.tiktok { background: rgba(238, 29, 82, 0.2); color: var(--tiktok-pink); }
-.platform-badge.instagram { background: rgba(131, 58, 180, 0.2); color: var(--ig-pink); }
-.platform-badge.twitch { background: rgba(100, 65, 165, 0.2); color: var(--twitch-purple); }
-
-.channel-details {
-    flex: 1;
-}
-
-.channel-name {
-    font-size: 1.3rem;
-    font-weight: 700;
-    margin-bottom: 5px;
-}
-
-.channel-handle {
-    color: var(--text-muted);
-    font-size: 0.95rem;
-}
-
-.channel-link {
-    color: #3b82f6;
-    text-decoration: none;
-    margin-left: 10px;
-    transition: color var(--transition);
-}
-
-.channel-link:hover {
-    color: #60a5fa;
-    text-decoration: underline;
-}
-
-/* ============ STATS GRID ============ */
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 1px;
-    padding: 20px;
-    background: var(--border-color);
-    border-radius: 0 0 12px 12px;
-}
-
-.stat-item {
-    background: var(--primary-light);
-    padding: 15px;
-    text-align: center;
-}
-
-.stat-label {
-    color: var(--text-muted);
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 8px;
-}
-
-.stat-value {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--text-primary);
-}
-
-/* ============ VIDEOS TABLE ============ */
-.videos-section {
-    padding: 20px;
-    border-top: 1px solid var(--border-color);
-}
-
-.videos-title {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 15px;
-}
-
-.videos-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.9rem;
-}
-
-.videos-table th {
-    background: var(--primary-dark);
-    color: var(--text-primary);
-    padding: 12px;
-    text-align: left;
-    font-weight: 600;
-    border-bottom: 2px solid var(--border-color);
-}
-
-.videos-table td {
-    padding: 12px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.videos-table tr:hover {
-    background: rgba(255, 255, 255, 0.02);
-}
-
-.video-title {
-    color: var(--text-primary);
-    word-break: break-word;
-}
-
-.video-link {
-    color: #3b82f6;
-    text-decoration: none;
-    transition: color var(--transition);
-}
-
-.video-link:hover {
-    color: #60a5fa;
-}
-
-.stat-value.number {
-    color: #3b82f6;
-    font-family: 'Monaco', monospace;
-}
-
-/* ============ PLATFORMS SECTION ============ */
-.platforms-section {
-    margin: 60px 0 40px;
-}
-
-.section-title {
-    font-size: 1.8rem;
-    font-weight: 700;
-    margin-bottom: 30px;
-    padding-bottom: 15px;
-    border-bottom: 2px solid var(--border-color);
-}
-
-.platforms-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 20px;
-}
-
-.platform-card {
-    background: var(--primary-light);
-    border: 2px solid var(--border-color);
-    border-radius: 12px;
-    padding: 25px;
-    text-align: center;
-    transition: all var(--transition);
-    cursor: pointer;
-}
-
-.platform-card:hover {
-    transform: translateY(-8px);
-    border-color: currentColor;
-}
-
-.platform-icon {
-    font-size: 3rem;
-    margin-bottom: 15px;
-}
-
-.platform-card h3 {
-    font-size: 1.2rem;
-    font-weight: 700;
-    margin-bottom: 10px;
-}
-
-.platform-card small {
-    color: var(--text-muted);
-    display: block;
-    font-size: 0.85rem;
-}
-
-.status-active {
-    color: var(--success-color);
-    font-weight: 600;
-    margin: 8px 0;
-}
-
-.status-pending {
-    color: var(--warning-color);
-    font-weight: 600;
-    margin: 8px 0;
-}
-
-/* Platform-specific styles */
-.platform-youtube { border-color: var(--yt-red); }
-.platform-youtube:hover { border-color: var(--yt-red); color: var(--yt-red); }
-
-.platform-tiktok { border-color: var(--tiktok-pink); }
-.platform-tiktok:hover { border-color: var(--tiktok-pink); color: var(--tiktok-pink); }
-
-.platform-instagram { border-color: var(--ig-pink); }
-.platform-instagram:hover { border-color: var(--ig-pink); color: var(--ig-pink); }
-
-.platform-twitch { border-color: var(--twitch-purple); }
-.platform-twitch:hover { border-color: var(--twitch-purple); color: var(--twitch-purple); }
-
-.platform-pinterest { border-color: var(--pinterest-red); }
-.platform-pinterest:hover { border-color: var(--pinterest-red); color: var(--pinterest-red); }
-
-.platform-linkedin { border-color: var(--linkedin-blue); }
-.platform-linkedin:hover { border-color: var(--linkedin-blue); color: var(--linkedin-blue); }
-
-.platform-facebook { border-color: var(--facebook-blue); }
-.platform-facebook:hover { border-color: var(--facebook-blue); color: var(--facebook-blue); }
-
-.platform-twitter { border-color: var(--twitter-black); }
-.platform-twitter:hover { border-color: var(--twitter-black); color: var(--twitter-black); }
-
-/* ============ ADMIN NOTICE ============ */
-.admin-notice {
-    background: rgba(16, 185, 129, 0.1);
-    border: 1px solid var(--success-color);
-    border-radius: 8px;
-    padding: 12px 16px;
-    margin-bottom: 20px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 0.95rem;
-    color: var(--text-primary);
-}
-
-.admin-link {
-    color: var(--success-color);
-    text-decoration: none;
-    font-weight: 600;
-    transition: color var(--transition);
-}
-
-.admin-link:hover {
-    color: #34d399;
-    text-decoration: underline;
-}
-
-/* ============ HISTORY SECTION ============ */
-.history-section {
-    margin: 40px 0;
-}
-
-.history-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.history-container {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.history-empty {
-    text-align: center;
-    color: var(--text-muted);
-    padding: 30px;
-}
-
-.history-item {
-    background: var(--primary-light);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 15px;
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 15px;
-    transition: all var(--transition);
-}
-
-.history-item:hover {
-    border-color: var(--yt-red);
-    background: rgba(255, 0, 0, 0.02);
-}
-
-.history-info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.history-time {
-    font-weight: 600;
-    color: var(--text-primary);
-    font-size: 0.95rem;
-}
-
-.history-stats {
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-}
-
-.history-results {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 8px;
-}
-
-.history-tag {
-    display: inline-block;
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    background: var(--primary-dark);
-    color: var(--text-secondary);
-}
-
-.history-tag.youtube { 
-    background: rgba(255, 0, 0, 0.15); 
-    color: var(--yt-red);
-}
-
-.history-tag.tiktok { 
-    background: rgba(238, 29, 82, 0.15); 
-    color: var(--tiktok-pink);
-}
-
-.history-tag.instagram { 
-    background: rgba(131, 58, 180, 0.15); 
-    color: var(--ig-pink);
-}
-
-.hidden {
-    display: none !important;
-}
-
-.visible {
-    display: block !important;
-}
-
-.history-delete-btn {
-    background: transparent;
-    border: 1px solid var(--border-color);
-    color: var(--text-muted);
-    width: 28px;
-    height: 28px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all var(--transition);
-    font-size: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.history-delete-btn:hover {
-    background: rgba(239, 68, 68, 0.1);
-    border-color: #ef4444;
-    color: #fca5a5;
-}
-
-.btn-danger {
-    background: rgba(239, 68, 68, 0.1);
-    color: #fca5a5;
-    border: 1px solid #ef4444;
-}
-
-.btn-danger:hover {
-    background: rgba(239, 68, 68, 0.2);
-}
-
-/* ============ FOOTER ============ */
-.footer {
-    text-align: center;
-    padding: 30px 20px;
-    color: var(--text-muted);
-    border-top: 1px solid var(--border-color);
-    margin-top: 60px;
-}
-
-/* ============ RESPONSIVE ============ */
-@media (max-width: 768px) {
-    .logo {
-        font-size: 2rem;
-    }
-
-    .header {
-        padding: 30px 15px;
-        margin-bottom: 25px;
-    }
-
-    .input-actions {
-        flex-direction: column;
-    }
-
-    .btn-primary {
-        flex: none;
-    }
-
-    .card-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .channel-info {
-        width: 100%;
-    }
-
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-    .videos-table {
-        font-size: 0.8rem;
-    }
-
-    .videos-table th,
-    .videos-table td {
-        padding: 8px;
-    }
-
-    .platforms-grid {
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    }
-
-    .config-container {
-        grid-template-columns: 1fr;
-    }
-
-    .section-title {
-        font-size: 1.5rem;
-    }
-}
-
-/* ============ LOADER ============ */
-.loader {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border: 2px solid var(--border-color);
-    border-radius: 50%;
-    border-top-color: var(--yt-red);
-    animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-/* ============ HIDE/SHOW ============ */
-.hidden {
-    display: none !important;
-}
-
-.visible {
-    display: block !important;
+@media (max-width: 640px) {
+    .container { padding: 16px 12px 28px; }
+    .hero-panel, .panel { padding: 16px; }
+    .hero-actions, .input-actions, .history-actions { flex-direction: column; }
+    .summary-grid { grid-template-columns: 1fr; }
+    .card-header { flex-direction: column; }
+    .history-item { flex-direction: column; }
 }
