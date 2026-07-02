@@ -160,14 +160,10 @@ a { color: inherit; }
     font-family: Consolas, monospace;
 }
 .links-input:focus { outline: 2px solid rgba(96, 165, 250, 0.28); border-color: rgba(96, 165, 250, 0.45); }
-.chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
-.chip-btn {
-    border: 1px solid rgba(96, 165, 250, 0.2);
-    background: rgba(96, 165, 250, 0.1);
-    color: #dbeafe;
-    padding: 7px 12px;
-    border-radius: 999px;
-    cursor: pointer;
+.input-hint {
+    margin: 12px 0 0;
+    color: var(--muted);
+    font-size: 0.92rem;
 }
 
 .status-bar {
@@ -236,6 +232,46 @@ a { color: inherit; }
 .history-stats, .history-results, .history-empty { color: var(--muted); font-size: 0.92rem; }
 .history-tag { display: inline-block; padding: 4px 9px; border-radius: 999px; margin-right: 6px; margin-top: 6px; background: rgba(96, 165, 250, 0.12); color: #bfdbfe; font-size: 0.8rem; }
 .history-delete-btn { border: 1px solid rgba(248, 113, 113, 0.2); background: transparent; color: var(--danger); width: 30px; height: 30px; border-radius: 8px; cursor: pointer; }
+
+.table-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.table-status {
+    color: var(--muted);
+    font-size: 0.92rem;
+    margin-bottom: 10px;
+}
+.table-wrapper {
+    overflow-x: auto;
+}
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 620px;
+}
+.data-table th,
+.data-table td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+    vertical-align: top;
+}
+.data-table th {
+    color: #bfdbfe;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+.data-table td a {
+    color: #93c5fd;
+    text-decoration: none;
+    word-break: break-all;
+}
+.data-table td a:hover { text-decoration: underline; }
+.empty-cell { color: var(--muted); text-align: center; }
 
 .footer { text-align: center; color: var(--muted); margin-top: 20px; padding: 12px 0 8px; }
 .modal-content { max-width: 860px; width: min(92vw, 860px); border-radius: 20px; padding: 18px; color: var(--text); }
