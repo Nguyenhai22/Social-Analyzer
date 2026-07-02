@@ -154,7 +154,6 @@ const linksInput = document.getElementById('links-input');
 const analyzeBtn = document.getElementById('analyze-btn');
 const analyzeBtnPrimary = document.getElementById('analyze-btn-primary');
 const clearBtn = document.getElementById('clear-btn');
-const demoBtn = document.getElementById('demo-btn');
 const resultsContainer = document.getElementById('results-container');
 const statusBar = document.getElementById('status');
 const historyContainer = document.getElementById('history-container');
@@ -164,16 +163,13 @@ const syncBtn = document.getElementById('sync-btn');
 const overviewTotal = document.getElementById('overview-total');
 const overviewSuccess = document.getElementById('overview-success');
 const overviewSync = document.getElementById('overview-sync');
-const chipButtons = document.querySelectorAll('.chip-btn');
 
 analyzeBtn?.addEventListener('click', handleAnalyze);
 analyzeBtnPrimary?.addEventListener('click', handleAnalyze);
 clearBtn?.addEventListener('click', handleClear);
-demoBtn?.addEventListener('click', handleDemo);
 clearHistoryBtn?.addEventListener('click', handleClearHistory);
 syncBtn?.addEventListener('click', handleSyncNow);
 if (openAdminBtn) openAdminBtn.addEventListener('click', () => window.location.href = 'admin.html');
-chipButtons.forEach(btn => btn.addEventListener('click', () => applyPreset(btn.dataset.demo)));
 window.addEventListener('load', async () => {
     loadHistory();
     updateOverview();
@@ -193,31 +189,6 @@ function handleClear() {
     linksInput.value = '';
     resultsContainer.innerHTML = '<div class="empty-state"><p>📍 Nhập các link để bắt đầu phân tích...</p></div>';
     statusBar.classList.remove('active');
-}
-
-function applyPreset(type) {
-    const presets = {
-        '1': [
-            'https://youtube.com/channel/UC4JX40jDee_tINbkjyCMBg',
-            'https://tiktok.com/@khaby.lame',
-            'https://instagram.com/cristiano'
-        ],
-        '2': [
-            'https://youtube.com/channel/UC4JX40jDee_tINbkjyCMBg',
-            'https://tiktok.com/@khaby.lame'
-        ],
-        '3': [
-            'https://instagram.com/cristiano',
-            'https://tiktok.com/@khaby.lame'
-        ]
-    };
-    linksInput.value = (presets[type] || presets['1']).join('\n');
-    showStatus('✨ Đã load preset mẫu. Bấm chạy phân tích để xem kết quả.', 'success');
-}
-
-function handleDemo() {
-    applyPreset('1');
-    analyzeLinks(['https://youtube.com/channel/UC4JX40jDee_tINbkjyCMBg', 'https://tiktok.com/@khaby.lame', 'https://instagram.com/cristiano']);
 }
 
 async function analyzeLinks(links) {
@@ -707,14 +678,22 @@ async function syncResultsToExternal(results, links, historyItem) {
         syncReport.supabase.attempted = true;
         try {
             const baseUrl = cfg.SUPABASE_URL.replace(/\/$/, '');
-            const historyRows = [];
+            const groupedRows = new Map();
+            const headers = {
+                'Content-Type': 'application/json',
+                'apikey': cfg.SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${cfg.SUPABASE_ANON_KEY}`,
+                'Prefer': 'return=minimal'
+            };
+
             results.forEach(item => {
                 const channelName = item.name || item.handle || 'Unknown';
                 const rowTimestamp = new Date().toISOString();
+                const channelRows = groupedRows.get(channelName) || [];
 
                 if (Array.isArray(item.videos) && item.videos.length) {
                     item.videos.slice(0, 5).forEach(video => {
-                        historyRows.push({
+                        channelRows.push({
                             link_video: video.url || item.url || '',
                             'kênh': channelName,
                             views: String(video.views || 0),
@@ -724,7 +703,7 @@ async function syncResultsToExternal(results, links, historyItem) {
                         });
                     });
                 } else {
-                    historyRows.push({
+                    channelRows.push({
                         link_video: item.url || '',
                         'kênh': channelName,
                         views: String(item.totalViews || item.views || 0),
@@ -733,27 +712,42 @@ async function syncResultsToExternal(results, links, historyItem) {
                         created_at: rowTimestamp
                     });
                 }
+
+                groupedRows.set(channelName, channelRows);
             });
 
-            if (historyRows.length === 0) {
+            if (groupedRows.size === 0) {
                 throw new Error('Không có hàng dữ liệu để lưu vào History_API_Analyst.');
             }
 
-            const response = await fetch(`${baseUrl}/rest/v1/History_API_Analyst`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'apikey': cfg.SUPABASE_ANON_KEY,
-                    'Authorization': `Bearer ${cfg.SUPABASE_ANON_KEY}`,
-                    'Prefer': 'return=minimal'
-                },
-                body: JSON.stringify(historyRows)
-            });
-            if (!response.ok) {
-                const errorText = await response.text().catch(() => 'Không thể đọc lỗi từ Supabase');
-                const friendly = interpretSupabaseError(errorText);
-                throw new Error(`Supabase insert failed: ${response.status} ${friendly || errorText}`);
+            for (const [channelName, channelRows] of groupedRows.entries()) {
+                const deleteUrl = `${baseUrl}/rest/v1/History_API_Analyst?kênh=eq.${encodeURIComponent(channelName)}`;
+                const deleteResponse = await fetch(deleteUrl, {
+                    method: 'DELETE',
+                    headers
+                });
+
+                if (!deleteResponse.ok) {
+                    const errorText = await deleteResponse.text().catch(() => 'Không thể đọc lỗi từ Supabase');
+                    const friendly = interpretSupabaseError(errorText);
+                    throw new Error(`Supabase delete failed for ${channelName}: ${deleteResponse.status} ${friendly || errorText}`);
+                }
+
+                if (channelRows.length) {
+                    const insertResponse = await fetch(`${baseUrl}/rest/v1/History_API_Analyst`, {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify(channelRows)
+                    });
+
+                    if (!insertResponse.ok) {
+                        const errorText = await insertResponse.text().catch(() => 'Không thể đọc lỗi từ Supabase');
+                        const friendly = interpretSupabaseError(errorText);
+                        throw new Error(`Supabase insert failed for ${channelName}: ${insertResponse.status} ${friendly || errorText}`);
+                    }
+                }
             }
+
             syncReport.supabase.success = true;
             syncReport.success = true;
         } catch (error) {
