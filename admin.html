@@ -8,8 +8,9 @@
     <style>
         body { background: radial-gradient(circle at top left, #14213d 0%, #07111f 55%, #050b14 100%); }
         .admin-page { min-height: 100vh; }
-        .admin-container { max-width: 760px; margin: 32px auto; padding: 0 12px 36px; }
+        .admin-container { max-width: 1280px; margin: 32px auto; padding: 0 12px 36px; }
         .admin-card { background: rgba(15, 23, 42, 0.82); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 22px; padding: 22px; margin-bottom: 16px; box-shadow: 0 20px 45px rgba(2, 8, 23, 0.35); }
+        .admin-card--wide { max-width: 100%; width: 100%; }
         .admin-header { text-align: center; margin-bottom: 20px; }
         .admin-header h1 { font-size: 2rem; margin-bottom: 8px; }
         .admin-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 12px; }
@@ -101,6 +102,30 @@
                 <div class="button-group">
                     <button class="btn-save" onclick="saveConfig()">💾 Lưu cấu hình</button>
                     <button class="btn-test" onclick="testAPIs()">🧪 Test API</button>
+                </div>
+            </div>
+
+            <div class="admin-card admin-card--wide">
+                <div class="admin-title">📊 Dữ liệu đã lưu</div>
+                <div class="table-toolbar">
+                    <input type="text" id="channel-filter" class="form-input" placeholder="Lọc theo tên kênh...">
+                    <button class="btn-test" onclick="loadSavedData()">🔄 Tải lại</button>
+                </div>
+                <div id="saved-data-status" class="table-status">Đang tải dữ liệu...</div>
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Kênh</th>
+                                <th>Link</th>
+                                <th>Views</th>
+                                <th>Likes</th>
+                                <th>Comments</th>
+                                <th>Thời gian</th>
+                            </tr>
+                        </thead>
+                        <tbody id="saved-data-body"></tbody>
+                    </table>
                 </div>
             </div>
 
