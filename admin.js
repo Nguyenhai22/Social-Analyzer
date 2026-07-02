@@ -11,14 +11,128 @@ const loginContainer = document.getElementById('login-container');
 const adminContent = document.getElementById('admin-content');
 const adminUsernameInput = document.getElementById('admin-username');
 const adminPasswordInput = document.getElementById('admin-password');
+const channelFilterInput = document.getElementById('channel-filter');
+const savedDataBody = document.getElementById('saved-data-body');
+const savedDataStatus = document.getElementById('saved-data-status');
 
 window.addEventListener('load', initializeAdminPanel);
 showKeysCheckbox?.addEventListener('change', toggleKeyVisibility);
+channelFilterInput?.addEventListener('input', loadSavedData);
 
 function initializeAdminPanel() {
     loginContainer.classList.remove('hidden');
     adminContent.classList.add('hidden');
     loadConfig();
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function getLocalHistoryRows() {
+    const history = JSON.parse(localStorage.getItem('analyzer_history') || '[]');
+    const rows = [];
+
+    history.forEach((item, historyIndex) => {
+        const results = Array.isArray(item.results) ? item.results : [];
+        results.forEach((result, resultIndex) => {
+            rows.push({
+                id: `${item.id || historyIndex}-${resultIndex}`,
+                source: 'local',
+                channel: result.name || result.platform || 'Unknown',
+                link: result.link || '',
+                platform: result.platform || '—',
+                views: result.totalViews || result.views || '',
+                likes: result.totalVideos || result.likes || '',
+                comments: result.subscribers || result.comments || '',
+                createdAt: item.timestamp || ''
+            });
+        });
+    });
+
+    return rows;
+}
+
+async function fetchSavedRowsFromSupabase() {
+    const baseUrl = (localStorage.getItem('supabase_url') || DEFAULT_SUPABASE_URL).replace(/\/$/, '');
+    const anonKey = (localStorage.getItem('supabase_anon_key') || DEFAULT_SUPABASE_ANON_KEY).trim();
+
+    if (!baseUrl || !anonKey) return [];
+
+    try {
+        const query = new URLSearchParams({
+            select: 'link_video,kênh,views,likes,comments,created_at',
+            order: 'created_at.desc',
+            limit: '100'
+        });
+        const response = await fetch(`${baseUrl}/rest/v1/History_API_Analyst?${query.toString()}`, {
+            method: 'GET',
+            headers: {
+                apikey: anonKey,
+                Authorization: `Bearer ${anonKey}`,
+                Accept: 'application/json'
+            }
+        });
+
+        if (!response.ok) return [];
+        const data = await response.json();
+        if (!Array.isArray(data)) return [];
+
+        return data.map((row, index) => ({
+            id: `supabase-${index}-${row.created_at || ''}`,
+            source: 'supabase',
+            channel: row['kênh'] || row.kênh || row.channel || 'Unknown',
+            link: row.link_video || '',
+            platform: row.platform || '—',
+            views: row.views || '',
+            likes: row.likes || '',
+            comments: row.comments || '',
+            createdAt: row.created_at || ''
+        }));
+    } catch (error) {
+        console.warn('Không thể tải dữ liệu từ Supabase:', error);
+        return [];
+    }
+}
+
+async function loadSavedData() {
+    if (!savedDataBody || !savedDataStatus) return;
+
+    const filterValue = (channelFilterInput?.value || '').trim().toLowerCase();
+    savedDataStatus.textContent = 'Đang tải dữ liệu...';
+
+    const localRows = getLocalHistoryRows();
+    const supabaseRows = await fetchSavedRowsFromSupabase();
+    const rows = supabaseRows.length ? supabaseRows : localRows;
+    const filteredRows = rows.filter((row) => {
+        const searchable = `${row.channel || ''} ${row.link || ''}`.toLowerCase();
+        return !filterValue || searchable.includes(filterValue);
+    });
+
+    if (!filteredRows.length) {
+        savedDataBody.innerHTML = '<tr><td colspan="6" class="empty-cell">Không có dữ liệu phù hợp.</td></tr>';
+        savedDataStatus.textContent = 'Không có dữ liệu phù hợp.';
+        return;
+    }
+
+    savedDataBody.innerHTML = filteredRows.map((row) => `
+        <tr>
+            <td>${escapeHtml(row.channel || 'Unknown')}</td>
+            <td>${row.link ? `<a href="${escapeHtml(row.link)}" target="_blank" rel="noreferrer">${escapeHtml(row.link)}</a>` : '—'}</td>
+            <td>${escapeHtml(row.views || '—')}</td>
+            <td>${escapeHtml(row.likes || '—')}</td>
+            <td>${escapeHtml(row.comments || '—')}</td>
+            <td>${escapeHtml(row.createdAt || '—')}</td>
+        </tr>
+    `).join('');
+
+    const sourceLabel = supabaseRows.length ? 'Supabase' : 'localStorage';
+    savedDataStatus.textContent = `Hiển thị ${filteredRows.length} dòng dữ liệu từ ${sourceLabel}.`;
 }
 
 function loadConfig() {
@@ -35,6 +149,7 @@ function handleLogin() {
         loginContainer.classList.add('hidden');
         adminContent.classList.remove('hidden');
         showStatus('✅ Đăng nhập thành công!', 'success');
+        loadSavedData();
     } else {
         showStatus('❌ Sai tên tài khoản hoặc mật khẩu.', 'error');
     }
