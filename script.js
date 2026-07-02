@@ -20,7 +20,7 @@ function getConfig() {
         SUPABASE_ANON_KEY: supabaseKey,
         API_ENDPOINT: storedApiEndpoint,
         SYNC_ENABLED: hasSupabase || hasEndpoint,
-        MAX_VIDEOS: 5,
+        MAX_VIDEOS: 3,
     };
 }
 
@@ -542,6 +542,7 @@ function saveToHistory(links, results, errors) {
             totalViews: item.totalViews,
             created: item.created,
             country: item.country,
+            videoName: item.videos?.[0]?.title || '',
             videos: item.videos || []
         })),
         errors,
@@ -696,6 +697,7 @@ async function syncResultsToExternal(results, links, historyItem) {
                         channelRows.push({
                             link_video: video.url || item.url || '',
                             'kênh': channelName,
+                            video_name: video.title || '',
                             views: String(video.views || 0),
                             likes: String(video.likes || 0),
                             comments: String(video.comments || 0),
@@ -706,6 +708,7 @@ async function syncResultsToExternal(results, links, historyItem) {
                     channelRows.push({
                         link_video: item.url || '',
                         'kênh': channelName,
+                        video_name: '',
                         views: String(item.totalViews || item.views || 0),
                         likes: String(item.totalVideos || item.likes || 0),
                         comments: String(item.subscribers || item.comments || 0),
@@ -720,6 +723,7 @@ async function syncResultsToExternal(results, links, historyItem) {
                 throw new Error('Không có hàng dữ liệu để lưu vào History_API_Analyst.');
             }
 
+            let nextId = 1;
             for (const [channelName, channelRows] of groupedRows.entries()) {
                 const deleteUrl = `${baseUrl}/rest/v1/History_API_Analyst?kênh=eq.${encodeURIComponent(channelName)}`;
                 const deleteResponse = await fetch(deleteUrl, {
@@ -734,10 +738,11 @@ async function syncResultsToExternal(results, links, historyItem) {
                 }
 
                 if (channelRows.length) {
+                    const rowsWithIds = channelRows.map(row => ({ id: nextId++, ...row }));
                     const insertResponse = await fetch(`${baseUrl}/rest/v1/History_API_Analyst`, {
                         method: 'POST',
                         headers,
-                        body: JSON.stringify(channelRows)
+                        body: JSON.stringify(rowsWithIds)
                     });
 
                     if (!insertResponse.ok) {
