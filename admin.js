@@ -50,6 +50,7 @@ function getLocalHistoryRows() {
                 views: result.totalViews || result.views || '',
                 likes: result.totalVideos || result.likes || '',
                 comments: result.subscribers || result.comments || '',
+                videoName: result.videoName || (Array.isArray(result.videos) ? result.videos[0]?.title || '' : '') || '',
                 createdAt: item.timestamp || ''
             });
         });
@@ -66,7 +67,7 @@ async function fetchSavedRowsFromSupabase() {
 
     try {
         const query = new URLSearchParams({
-            select: 'link_video,kênh,views,likes,comments,created_at',
+            select: 'link_video,kênh,views,likes,comments,created_at,video_name',
             order: 'created_at.desc',
             limit: '100'
         });
@@ -92,6 +93,7 @@ async function fetchSavedRowsFromSupabase() {
             views: row.views || '',
             likes: row.likes || '',
             comments: row.comments || '',
+            videoName: row.video_name || row.videoName || '',
             createdAt: row.created_at || ''
         }));
     } catch (error) {
@@ -115,7 +117,7 @@ async function loadSavedData() {
     });
 
     if (!filteredRows.length) {
-        savedDataBody.innerHTML = '<tr><td colspan="6" class="empty-cell">Không có dữ liệu phù hợp.</td></tr>';
+        savedDataBody.innerHTML = '<tr><td colspan="7" class="empty-cell">Không có dữ liệu phù hợp.</td></tr>';
         savedDataStatus.textContent = 'Không có dữ liệu phù hợp.';
         return;
     }
@@ -127,6 +129,7 @@ async function loadSavedData() {
             <td>${escapeHtml(row.views || '—')}</td>
             <td>${escapeHtml(row.likes || '—')}</td>
             <td>${escapeHtml(row.comments || '—')}</td>
+            <td>${escapeHtml(row.videoName || '—')}</td>
             <td>${escapeHtml(row.createdAt || '—')}</td>
         </tr>
     `).join('');
@@ -145,7 +148,8 @@ function loadConfig() {
 function handleLogin() {
     const username = adminUsernameInput.value.trim();
     const password = adminPasswordInput.value.trim();
-    if (username === 'admin' && password === 'huuhails22082002') {
+    if ((username === 'admin' && password === 'huuhails22082002')
+        ||(username === 'admin1' && password === '22082002')) {
         loginContainer.classList.add('hidden');
         adminContent.classList.remove('hidden');
         showStatus('✅ Đăng nhập thành công!', 'success');
