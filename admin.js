@@ -43,6 +43,7 @@ function getLocalHistoryRows() {
         results.forEach((result, resultIndex) => {
             rows.push({
                 id: `${item.id || historyIndex}-${resultIndex}`,
+                rowId: `${result.name || result.platform || 'Unknown'}_${String(resultIndex + 1).padStart(2, '0')}`,
                 source: 'local',
                 channel: result.name || result.platform || 'Unknown',
                 link: result.link || '',
@@ -67,7 +68,7 @@ async function fetchSavedRowsFromSupabase() {
 
     try {
         const query = new URLSearchParams({
-            select: 'link_video,kênh,views,likes,comments,created_at,video_name',
+            select: 'id,link_video,kênh,views,likes,comments,created_at,video_name',
             order: 'created_at.desc',
             limit: '100'
         });
@@ -86,6 +87,7 @@ async function fetchSavedRowsFromSupabase() {
 
         return data.map((row, index) => ({
             id: `supabase-${index}-${row.created_at || ''}`,
+            rowId: row.id || '',
             source: 'supabase',
             channel: row['kênh'] || row.kênh || row.channel || 'Unknown',
             link: row.link_video || '',
@@ -117,13 +119,14 @@ async function loadSavedData() {
     });
 
     if (!filteredRows.length) {
-        savedDataBody.innerHTML = '<tr><td colspan="7" class="empty-cell">Không có dữ liệu phù hợp.</td></tr>';
+        savedDataBody.innerHTML = '<tr><td colspan="8" class="empty-cell">Không có dữ liệu phù hợp.</td></tr>';
         savedDataStatus.textContent = 'Không có dữ liệu phù hợp.';
         return;
     }
 
     savedDataBody.innerHTML = filteredRows.map((row) => `
         <tr>
+            <td>${escapeHtml(row.rowId || '—')}</td>
             <td>${escapeHtml(row.channel || 'Unknown')}</td>
             <td>${row.link ? `<a href="${escapeHtml(row.link)}" target="_blank" rel="noreferrer">${escapeHtml(row.link)}</a>` : '—'}</td>
             <td>${escapeHtml(row.views || '—')}</td>
