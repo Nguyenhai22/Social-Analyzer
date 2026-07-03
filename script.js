@@ -20,7 +20,7 @@ function getConfig() {
         SUPABASE_ANON_KEY: supabaseKey,
         API_ENDPOINT: storedApiEndpoint,
         SYNC_ENABLED: hasSupabase || hasEndpoint,
-        MAX_VIDEOS: 3,
+        MAX_VIDEOS: RECENT_VIDEO_LIMIT,
     };
 }
 
@@ -87,6 +87,25 @@ async function getSupabaseApiKey(apiName) {
 
 const HISTORY_STORAGE_KEY = 'analyzer_history';
 const MAX_HISTORY_ITEMS = 50;
+const RECENT_VIDEO_LIMIT = 3;
+const SUPABASE_HISTORY_TABLE = 'History_API_Analyst';
+const SUPABASE_CHANNEL_COLUMN = 'kênh';
+
+function normalizeChannelIdName(value) {
+    return String(value || 'Unknown')
+        .trim()
+        .replace(/^@+/, '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd')
+        .replace(/Đ/g, 'D')
+        .replace(/[^a-zA-Z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '') || 'Unknown';
+}
+
+function makeVideoRowId(channelName, index) {
+    return `${normalizeChannelIdName(channelName)}_${String(index + 1).padStart(2, '0')}`;
+}
 const PLATFORM_COLORS = {
     YOUTUBE: { name: '▶ YouTube', class: 'youtube', accent: '#FF4D4F' },
     TIKTOK: { name: '♪ TikTok', class: 'tiktok', accent: '#EC4899' },
@@ -311,16 +330,17 @@ async function fetchYouTubeData(url) {
     };
 
     try {
-        const max = cfg.MAX_VIDEOS || 5;
+        const max = cfg.MAX_VIDEOS || RECENT_VIDEO_LIMIT;
         const searchResp = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&maxResults=${max}&type=video&key=${key}`);
         const searchData = await searchResp.json();
         if (searchData.items?.length) {
-            const videoIds = searchData.items.map(it => it.id.videoId).filter(Boolean).join(',');
-            if (videoIds) {
-                const vidsResp = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${videoIds}&key=${key}`);
+            const videoIds = searchData.items.map(it => it.id.videoId).filter(Boolean);
+            if (videoIds.length) {
+                const vidsResp = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${videoIds.join(',')}&key=${key}`);
                 const vidsData = await vidsResp.json();
                 if (vidsData.items) {
-                    result.videos = vidsData.items.map(v => ({
+                    const videoMap = new Map(vidsData.items.map(v => [v.id, v]));
+                    result.videos = videoIds.map(id => videoMap.get(id)).filter(Boolean).map(v => ({
                         title: v.snippet.title,
                         date: v.snippet.publishedAt ? new Date(v.snippet.publishedAt).toLocaleDateString('vi-VN') : 'N/A',
                         views: Number(v.statistics.viewCount || 0),
@@ -354,15 +374,17 @@ async function fetchTikTokData(url) {
     const username = m ? m[1] : null;
     if (!username) throw new Error('Không thể trích username TikTok từ URL.');
 
-    const response = await fetch(`https://tiktok-api23.p.rapidapi.com/api/user/info?uniqueId=${encodeURIComponent(username)}`, {
+    const host = 'tiktok-api23.p.rapidapi.com';
+    const headers = { 'x-rapidapi-key': key, 'x-rapidapi-host': host };
+    const response = await fetch(`https://${host}/api/user/info?uniqueId=${encodeURIComponent(username)}`, {
         method: 'GET',
-        headers: { 'x-rapidapi-key': key, 'x-rapidapi-host': 'tiktok-api23.p.rapidapi.com' }
+        headers
     });
     const data = await response.json();
     if (!data || data.message || data.error) throw new Error(data.message || data.error || 'Phản hồi TikTok không hợp lệ');
 
     const info = data.userInfo || data.user || data;
-    return {
+    const result = {
         platform: 'TIKTOK',
         name: info.user?.nickname || info.nickname || username,
         handle: '@' + username,
@@ -374,6 +396,40 @@ async function fetchTikTokData(url) {
         totalViews: Number(info.stats?.playCount || 0),
         videos: []
     };
+
+    const max = cfg.MAX_VIDEOS || RECENT_VIDEO_LIMIT;
+    const postEndpoints = [
+        `https://${host}/api/user/posts?uniqueId=${encodeURIComponent(username)}&count=${max}`,
+        `https://${host}/api/user/posts?secUid=${encodeURIComponent(info.user?.secUid || info.secUid || '')}&count=${max}`
+    ].filter(endpoint => !endpoint.includes('secUid=&'));
+
+    for (const endpoint of postEndpoints) {
+        try {
+            const postsResponse = await fetch(endpoint, { method: 'GET', headers });
+            const postsData = await postsResponse.json();
+            const items = postsData.itemList || postsData.items || postsData.videos || postsData.data?.itemList || postsData.data?.items || postsData.data?.videos || [];
+            if (Array.isArray(items) && items.length) {
+                result.videos = items.slice(0, max).map(video => {
+                    const stats = video.stats || video.statistics || {};
+                    const author = video.author?.uniqueId || username;
+                    const videoId = video.id || video.aweme_id || video.video_id || '';
+                    return {
+                        title: video.desc || video.title || video.caption || '(Không có caption)',
+                        date: video.createTime ? new Date(Number(video.createTime) * 1000).toLocaleDateString('vi-VN') : '—',
+                        views: Number(stats.playCount || stats.play_count || video.playCount || 0),
+                        likes: Number(stats.diggCount || stats.likeCount || stats.like_count || video.diggCount || 0),
+                        comments: Number(stats.commentCount || stats.comment_count || video.commentCount || 0),
+                        url: video.webVideoUrl || video.url || (videoId ? `https://www.tiktok.com/@${author}/video/${videoId}` : url)
+                    };
+                });
+                break;
+            }
+        } catch (error) {
+            console.warn('TikTok posts endpoint error:', error.message || error);
+        }
+    }
+
+    return result;
 }
 
 async function fetchInstagramData(url) {
@@ -402,7 +458,7 @@ async function fetchInstagramData(url) {
     const user = (respUser && (respUser.data || respUser.user || (respUser.graphql && respUser.graphql.user))) || respUser;
     if (!user || (!user.username && !user.id && !user.pk)) throw new Error('Không lấy được thông tin Instagram.');
 
-    const max = cfg.MAX_VIDEOS || 5;
+    const max = cfg.MAX_VIDEOS || RECENT_VIDEO_LIMIT;
     let posts = [];
     const postEndpoints = [
         `https://${IG_HOST}/user-posts/?username_or_id=${encodeURIComponent(username)}&count=${max}`,
@@ -543,7 +599,7 @@ function saveToHistory(links, results, errors) {
             created: item.created,
             country: item.country,
             videoName: item.videos?.[0]?.title || '',
-            videos: item.videos || []
+            videos: Array.isArray(item.videos) ? item.videos.slice(0, RECENT_VIDEO_LIMIT) : []
         })),
         errors,
     };
@@ -665,17 +721,19 @@ async function syncResultsToExternal(results, links, historyItem) {
 
     const hasSupabase = Boolean(cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY);
     const hasEndpoint = Boolean(cfg.API_ENDPOINT);
-    if (!hasSupabase && !hasEndpoint) {
-        return { success: false, reason: 'no-sync-configured' };
-    }
-
     const syncReport = {
         success: false,
+        attempted: false,
+        rowCount: 0,
         supabase: { attempted: false, success: false, error: '' },
         endpoint: { attempted: false, success: false, error: '' }
     };
+    if (!hasSupabase && !hasEndpoint) {
+        return { ...syncReport, reason: 'no-sync-configured' };
+    }
 
     if (hasSupabase) {
+        syncReport.attempted = true;
         syncReport.supabase.attempted = true;
         try {
             const baseUrl = cfg.SUPABASE_URL.replace(/\/$/, '');
@@ -684,19 +742,21 @@ async function syncResultsToExternal(results, links, historyItem) {
                 'Content-Type': 'application/json',
                 'apikey': cfg.SUPABASE_ANON_KEY,
                 'Authorization': `Bearer ${cfg.SUPABASE_ANON_KEY}`,
-                'Prefer': 'return=minimal'
+                'Prefer': 'return=minimal,resolution=merge-duplicates'
             };
 
             results.forEach(item => {
                 const channelName = item.name || item.handle || 'Unknown';
+                if (groupedRows.has(channelName)) return;
                 const rowTimestamp = new Date().toISOString();
                 const channelRows = groupedRows.get(channelName) || [];
 
                 if (Array.isArray(item.videos) && item.videos.length) {
-                    item.videos.slice(0, 5).forEach(video => {
+                    item.videos.slice(0, RECENT_VIDEO_LIMIT).forEach((video, index) => {
                         channelRows.push({
-                            link_video: video.url || item.url || '',
-                            'kênh': channelName,
+                            id: makeVideoRowId(channelName, index),
+                            link_video: video.url || item.url || item.link || '',
+                            [SUPABASE_CHANNEL_COLUMN]: channelName,
                             video_name: video.title || '',
                             views: String(video.views || 0),
                             likes: String(video.likes || 0),
@@ -706,8 +766,9 @@ async function syncResultsToExternal(results, links, historyItem) {
                     });
                 } else {
                     channelRows.push({
-                        link_video: item.url || '',
-                        'kênh': channelName,
+                        id: makeVideoRowId(channelName, 0),
+                        link_video: item.url || item.link || '',
+                        [SUPABASE_CHANNEL_COLUMN]: channelName,
                         video_name: '',
                         views: String(item.totalViews || item.views || 0),
                         likes: String(item.totalVideos || item.likes || 0),
@@ -723,9 +784,11 @@ async function syncResultsToExternal(results, links, historyItem) {
                 throw new Error('Không có hàng dữ liệu để lưu vào History_API_Analyst.');
             }
 
-            let nextId = 1;
             for (const [channelName, channelRows] of groupedRows.entries()) {
-                const deleteUrl = `${baseUrl}/rest/v1/History_API_Analyst?kênh=eq.${encodeURIComponent(channelName)}`;
+                const deleteQuery = new URLSearchParams({
+                    [SUPABASE_CHANNEL_COLUMN]: `eq.${channelName}`
+                });
+                const deleteUrl = `${baseUrl}/rest/v1/${SUPABASE_HISTORY_TABLE}?${deleteQuery.toString()}`;
                 const deleteResponse = await fetch(deleteUrl, {
                     method: 'DELETE',
                     headers
@@ -734,15 +797,16 @@ async function syncResultsToExternal(results, links, historyItem) {
                 if (!deleteResponse.ok) {
                     const errorText = await deleteResponse.text().catch(() => 'Không thể đọc lỗi từ Supabase');
                     const friendly = interpretSupabaseError(errorText);
-                    throw new Error(`Supabase delete failed for ${channelName}: ${deleteResponse.status} ${friendly || errorText}`);
+                    const deleteError = `Supabase delete skipped for ${channelName}: ${deleteResponse.status} ${friendly || errorText}`;
+                    console.warn(deleteError);
+                    syncReport.supabase.error = deleteError;
                 }
 
                 if (channelRows.length) {
-                    const rowsWithIds = channelRows.map(row => ({ id: nextId++, ...row }));
-                    const insertResponse = await fetch(`${baseUrl}/rest/v1/History_API_Analyst`, {
+                    const insertResponse = await fetch(`${baseUrl}/rest/v1/${SUPABASE_HISTORY_TABLE}?on_conflict=id`, {
                         method: 'POST',
                         headers,
-                        body: JSON.stringify(rowsWithIds)
+                        body: JSON.stringify(channelRows)
                     });
 
                     if (!insertResponse.ok) {
@@ -750,11 +814,15 @@ async function syncResultsToExternal(results, links, historyItem) {
                         const friendly = interpretSupabaseError(errorText);
                         throw new Error(`Supabase insert failed for ${channelName}: ${insertResponse.status} ${friendly || errorText}`);
                     }
+                    syncReport.rowCount += channelRows.length;
                 }
             }
 
             syncReport.supabase.success = true;
             syncReport.success = true;
+            if (syncReport.rowCount > 0) {
+                syncReport.supabase.error = '';
+            }
         } catch (error) {
             syncReport.supabase.error = error.message || String(error);
             syncReport.success = false;
@@ -763,6 +831,7 @@ async function syncResultsToExternal(results, links, historyItem) {
     }
 
     if (hasEndpoint) {
+        syncReport.attempted = true;
         syncReport.endpoint.attempted = true;
         try {
             const response = await fetch(cfg.API_ENDPOINT, {
@@ -790,19 +859,29 @@ async function syncResultsToExternal(results, links, historyItem) {
 
 async function handleSyncNow() {
     const history = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY)) || [];
-    const latest = history[0];
-    if (!latest) {
+    if (!history.length) {
         showStatus('⚠️ Chưa có dữ liệu để đồng bộ. Hãy phân tích trước.', 'error');
         return;
     }
-    showStatus('☁️ Đang đồng bộ dữ liệu...', 'loading');
-    const syncReport = await syncResultsToExternal(latest.results || [], latest.results?.map(r => r.link) || [], latest);
+    const allResults = history.flatMap(item => Array.isArray(item.results) ? item.results : []);
+    const allLinks = history.flatMap(item => Array.isArray(item.results) ? item.results.map(r => r.link).filter(Boolean) : []);
+    const summaryItem = {
+        errorCount: history.reduce((sum, item) => sum + Number(item.errorCount || 0), 0)
+    };
+
+    if (!allResults.length) {
+        showStatus('⚠️ Lịch sử chưa có kết quả hợp lệ để đồng bộ.', 'error');
+        return;
+    }
+
+    showStatus(`☁️ Đang đồng bộ toàn bộ lịch sử (${history.length} lần phân tích)...`, 'loading');
+    const syncReport = await syncResultsToExternal(allResults, allLinks, summaryItem);
     updateOverview();
 
     if (syncReport.success) {
-        showStatus('✅ Đồng bộ hoàn tất thành công.', 'success');
+        showStatus(`✅ Đồng bộ hoàn tất: ${syncReport.rowCount || allResults.length} dòng dữ liệu.`, 'success');
     } else if (syncReport.supabase.attempted || syncReport.endpoint.attempted) {
-        showStatus('⚠️ Đồng bộ không hoàn thành. Kiểm tra cấu hình Supabase/API.', 'error');
+        showStatus(`⚠️ Đồng bộ không hoàn thành: ${syncReport.supabase.error || syncReport.endpoint.error || 'Kiểm tra cấu hình Supabase/API.'}`, 'error');
     } else {
         showStatus('⚠️ Chưa cấu hình Supabase/API để đồng bộ.', 'error');
     }
